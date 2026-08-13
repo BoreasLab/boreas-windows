@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Boreas.Ui.Contracts;
 
 namespace Boreas.Ui.Services;
@@ -25,7 +26,7 @@ public sealed class UnimplementedControlChannel : IControlChannel
 
     public ServiceState State { get; } = new ServiceState.Stopped();
 
-    public IReadOnlyList<ControlEvent> Events { get; } = [];
+    public ImmutableArray<ControlEvent> Events { get; } = [];
 
     public event EventHandler? Changed
     {
@@ -48,6 +49,14 @@ public sealed class UnimplementedControlChannel : IControlChannel
         CancellationToken cancellationToken = default) =>
         Task.FromResult<ConfigurationOutcome>(
             new ConfigurationOutcome.Rejected(NotBuilt, new Dictionary<ConfigField, string>()));
+
+    /// <summary>
+    /// Nothing was opened, so nothing is closed. Present because the interface
+    /// requires it of the implementation that does own a pipe.
+    /// </summary>
+    public void Dispose()
+    {
+    }
 
     public Task<ConfigurationDraft> ReadConfigurationAsync(CancellationToken cancellationToken = default) =>
         Task.FromResult(new ConfigurationDraft(

@@ -39,7 +39,17 @@ public abstract record ControlChannelState
     /// sent, because an unknown version is rejected by the service anyway and
     /// sending one would only produce a confusing typed error.
     /// </summary>
-    public sealed record VersionMismatch(int ClientVersion, int ServiceVersion) : ControlChannelState;
+    /// <remarks>
+    /// Only the service's version is carried. The client's was a parameter,
+    /// which meant this state could be constructed reporting a client version
+    /// that was not this client's, and nothing would have caught it. There is
+    /// one client version, <see cref="ControlProtocol.Version"/>, and it is
+    /// read rather than passed.
+    /// </remarks>
+    public sealed record VersionMismatch(int ServiceVersion) : ControlChannelState
+    {
+        public int ClientVersion => ControlProtocol.Version;
+    }
 
     public TResult Match<TResult>(
         Func<Connecting, TResult> connecting,

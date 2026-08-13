@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Text;
 using Boreas.Ui.Contracts;
 using Boreas.Ui.Services;
@@ -97,12 +98,12 @@ public sealed class DiagnosticsViewModel : ObservableObject, IDisposable
             }
 
             var all = _channel.Events;
-            if (all.Count == 0)
+            if (all.IsEmpty)
             {
                 return new CollectionState<EventRow>.Empty();
             }
 
-            var matching = (Filter is { } kind ? all.Where(e => e.Kind == kind) : all)
+            var matching = (Filter is { } kind ? all.Where(e => e.Kind == kind) : all.AsEnumerable())
                 .Select(EventRow.From)
                 .ToArray();
 
@@ -113,7 +114,7 @@ public sealed class DiagnosticsViewModel : ObservableObject, IDisposable
 
             // The service bounds its subscription; this window is what the
             // client keeps. Saying so beats silently showing a truncated list.
-            return matching.Length >= EventWindow
+            return matching.Length >= ControlProtocol.EventWindow
                 ? new CollectionState<EventRow>.Partial(matching, LoadOlder)
                 : new CollectionState<EventRow>.Ready(matching);
         }
@@ -124,8 +125,6 @@ public sealed class DiagnosticsViewModel : ObservableObject, IDisposable
         _events = null;
         Raise(nameof(Events));
     }
-
-    private const int EventWindow = 200;
 
     public string ComposeSupportText()
     {
@@ -190,7 +189,7 @@ public sealed record EventRow(
     string Kind,
     string Summary,
     string NextStep,
-    IReadOnlyList<string> SupportLines)
+    ImmutableArray<string> SupportLines)
 {
     /// <summary>
     /// Derived, not stored. A stored flag alongside the text it describes is
@@ -217,7 +216,10 @@ public sealed record EventRow(
             Kind: Describe(source.Kind),
             Summary: source.Summary,
             NextStep: source.Error?.NextStep ?? string.Empty,
-            SupportLines: lines);
+            // Accumulated locally, frozen on the way out: the list never
+            // escapes, so the record holds a value rather than a handle to
+            // something someone else could still be writing.
+            SupportLines: [.. lines]);
     }
 
     private static string Describe(ControlEventKind kind) => kind switch

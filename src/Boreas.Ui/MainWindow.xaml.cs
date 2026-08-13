@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using Boreas.Ui.Contracts;
 using Boreas.Ui.Presentation;
 using Boreas.Ui.Services;
@@ -17,8 +18,12 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
 
         _viewModel = App.Shell;
-        _viewModel.PropertyChanged += (_, _) => RenderChannel();
-        _viewModel.ThemeChanged += (_, theme) => ApplyTheme(theme);
+
+        // Named handlers, not lambdas, because both have to come off again and
+        // an anonymous delegate cannot be removed. The shell outlives this
+        // window, so a subscription left behind keeps the window alive with it.
+        _viewModel.PropertyChanged += OnShellPropertyChanged;
+        _viewModel.ThemeChanged += OnThemeChanged;
 
         Title = "Boreas";
 
@@ -39,11 +44,29 @@ public sealed partial class MainWindow : Window
         Navigate(NavigationSection.Status);
 
         App.NavigationRequested += OnNavigationRequested;
-        // The view model is owned by App, which outlives this window.
-        Closed += (_, _) => App.NavigationRequested -= OnNavigationRequested;
+        Closed += OnClosed;
     }
 
     public ShellViewModel ViewModel => _viewModel;
+
+    /// <summary>
+    /// The one place this process shuts down. Every subscription taken in the
+    /// constructor is released here, and then the application releases the
+    /// channel and the shell that own the resources behind them.
+    /// </summary>
+    private void OnClosed(object sender, WindowEventArgs args)
+    {
+        Closed -= OnClosed;
+        App.NavigationRequested -= OnNavigationRequested;
+        _viewModel.PropertyChanged -= OnShellPropertyChanged;
+        _viewModel.ThemeChanged -= OnThemeChanged;
+
+        App.Shutdown();
+    }
+
+    private void OnShellPropertyChanged(object? sender, PropertyChangedEventArgs args) => RenderChannel();
+
+    private void OnThemeChanged(object? sender, ThemePreference theme) => ApplyTheme(theme);
 
     /// <summary>
     /// Keeps the chip clear of the minimise, maximise and close buttons at

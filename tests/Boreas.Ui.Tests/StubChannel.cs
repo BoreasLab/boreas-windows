@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Boreas.Ui.Contracts;
 using Boreas.Ui.Services;
 
@@ -13,12 +14,17 @@ public sealed class StubChannel(ControlChannelState channel, ServiceState state)
 
     public ServiceState State { get; } = state;
 
-    public IReadOnlyList<ControlEvent> Events { get; init; } = [];
+    public ImmutableArray<ControlEvent> Events { get; init; } = [];
 
     public event EventHandler? Changed
     {
         add { }
         remove { }
+    }
+
+    /// <summary>Nothing is opened, so nothing is closed.</summary>
+    public void Dispose()
+    {
     }
 
     public Task RefreshAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
@@ -55,12 +61,17 @@ public sealed class RecordingChannel(ConfigurationOutcome outcome, Configuration
 
     public ServiceState State { get; } = new ServiceState.Stopped();
 
-    public IReadOnlyList<ControlEvent> Events { get; } = [];
+    public ImmutableArray<ControlEvent> Events { get; } = [];
 
     public event EventHandler? Changed
     {
         add { }
         remove { }
+    }
+
+    /// <summary>Nothing is opened, so nothing is closed.</summary>
+    public void Dispose()
+    {
     }
 
     public Task RefreshAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;

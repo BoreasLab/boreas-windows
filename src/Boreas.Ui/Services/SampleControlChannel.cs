@@ -1,4 +1,5 @@
 #if DEBUG
+using System.Collections.Immutable;
 using Boreas.Ui.Contracts;
 using Microsoft.UI.Dispatching;
 
@@ -17,19 +18,24 @@ namespace Boreas.Ui.Services;
 /// tabular figures and live-region announcements can be seen behaving. They
 /// measure nothing.
 /// </remarks>
-public sealed class SampleControlChannel : IControlChannel, IDisposable
+public sealed class SampleControlChannel : IControlChannel
 {
+    private static readonly SessionIdentity Session = new("sample-0000-0000");
+    private static readonly EgressBypass Bypass = new EgressBypass.Bound("Wi-Fi (sample)");
+
     private readonly DispatcherQueue _dispatcher = DispatcherQueue.GetForCurrentThread();
-    private readonly List<ControlEvent> _events = [];
     private readonly Timer _tick;
-    private readonly SessionIdentity _session = new("sample-0000-0000");
-    private SessionCounters _counters;
-    private DateTimeOffset _since;
-    private readonly EgressBypass _bypass = new EgressBypass.Bound("Wi-Fi (sample)");
+
+    // Two mutable cells, and the running session is not one of them. It used to
+    // be four: State alongside a separate counters struct and start time that
+    // Snapshot read back. Those were a second copy of what State already
+    // carried, and a copy that can disagree with the thing it copies is a
+    // disagreement waiting to be rendered. The session now lives in
+    // ServiceState.Running and is advanced by rebuilding it.
+    private ImmutableArray<ControlEvent> _events = [];
 
     public SampleControlChannel()
     {
-        Channel = new ControlChannelState.Connected(ProtocolVersion: 1);
         State = new ServiceState.Stopped();
         Record(ControlEventKind.Channel, "Control channel connected (sample).");
         // Advance runs on the UI thread, not the timer's pool thread. It writes
@@ -40,11 +46,12 @@ public sealed class SampleControlChannel : IControlChannel, IDisposable
         _tick = new Timer(_ => _dispatcher.TryEnqueue(Advance), state: null, dueTime: 1000, period: 1000);
     }
 
-    public ControlChannelState Channel { get; private set; }
+    /// <summary>Fixed at construction: the sample never loses its channel.</summary>
+    public ControlChannelState Channel { get; } = new ControlChannelState.Connected(ControlProtocol.Version);
 
     public ServiceState State { get; private set; }
 
-    public IReadOnlyList<ControlEvent> Events => _events;
+    public ImmutableArray<ControlEvent> Events => _events;
 
     public event EventHandler? Changed;
 
@@ -59,17 +66,15 @@ public sealed class SampleControlChannel : IControlChannel, IDisposable
         Transition(new ServiceState.Starting(), "Start requested (sample).");
         await Task.Delay(1400, cancellationToken);
 
-        _since = DateTimeOffset.Now;
-        _counters = default;
         Transition(
-            new ServiceState.Running(_session, Snapshot()),
+            new ServiceState.Running(Session, Snapshot(DateTimeOffset.Now, default)),
             "Session running (sample).");
         return State;
     }
 
     public async Task<ServiceState> StopAsync(CancellationToken cancellationToken = default)
     {
-        Transition(new ServiceState.Stopping(_session), "Stop requested (sample).");
+        Transition(new ServiceState.Stopping(Session), "Stop requested (sample).");
         await Task.Delay(900, cancellationToken);
         Transition(new ServiceState.Stopped(), "Session stopped (sample).");
         return State;
@@ -96,28 +101,39 @@ public sealed class SampleControlChannel : IControlChannel, IDisposable
             Routes: RouteMode.Default,
             Egress: EgressPolicy.Direct));
 
-    private SessionStatus Snapshot() => new(
+    private static SessionStatus Snapshot(DateTimeOffset since, SessionCounters counters) => new(
         AdapterName: "Boreas (sample)",
         InterfaceAddress: "10.7.0.2/24",
         Mtu: 1420,
-        RunningSince: _since,
-        Counters: _counters,
-        Bypass: _bypass);
+        RunningSince: since,
+        Counters: counters,
+        Bypass: Bypass);
 
+    /// <summary>
+    /// One tick of invented traffic, as a function of the session that is
+    /// running rather than of fields kept beside it.
+    /// </summary>
     private void Advance()
     {
-        if (State is not ServiceState.Running)
+        if (State is not ServiceState.Running running)
         {
             return;
         }
 
-        _counters = new SessionCounters(
-            _counters.PacketsIn + 37,
-            _counters.PacketsOut + 41,
-            _counters.BytesIn + 24_800,
-            _counters.BytesOut + 9_100);
+        var counters = running.Status.Counters;
 
-        State = new ServiceState.Running(_session, Snapshot());
+        State = running with
+        {
+            Status = running.Status with
+            {
+                Counters = new SessionCounters(
+                    counters.PacketsIn + 37,
+                    counters.PacketsOut + 41,
+                    counters.BytesIn + 24_800,
+                    counters.BytesOut + 9_100),
+            },
+        };
+
         Notify();
     }
 
@@ -130,13 +146,16 @@ public sealed class SampleControlChannel : IControlChannel, IDisposable
 
     private void Record(ControlEventKind kind, string summary, TypedError? error = null)
     {
-        _events.Insert(0, new ControlEvent(DateTimeOffset.Now, kind, summary, error));
+        // Newest first, bounded to the window the interface promises, from the
+        // one constant that promises it. Rebuilt rather than mutated: the value
+        // already handed to a reader stays exactly as it was handed over.
+        // O(window) per event, and events arrive at the speed a person presses
+        // buttons.
+        var kept = _events.Length < ControlProtocol.EventWindow
+            ? _events
+            : _events[..(ControlProtocol.EventWindow - 1)];
 
-        // Bounded, like the real subscription has to be.
-        if (_events.Count > 200)
-        {
-            _events.RemoveRange(200, _events.Count - 200);
-        }
+        _events = [new ControlEvent(DateTimeOffset.Now, kind, summary, error), .. kept];
     }
 
     /// <summary>

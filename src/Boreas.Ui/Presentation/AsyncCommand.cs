@@ -39,7 +39,35 @@ public sealed class AsyncCommand : ObservableObject, ICommand
 
     public bool CanExecute(object? parameter) => !IsRunning && _canExecute();
 
-    public async void Execute(object? parameter) => await ExecuteAsync(CancellationToken.None);
+    /// <summary>
+    /// The <see cref="ICommand"/> entry point, which XAML calls and which
+    /// cannot be awaited.
+    /// </summary>
+    /// <remarks>
+    /// <c>async void</c> is forced by the interface, and an exception escaping
+    /// one is unhandled: it does not reach a caller, it reaches the process.
+    /// Cancellation is caught because it is expected, being the client's own
+    /// request when a page unloads or the window closes, and reporting it would
+    /// be reporting that something worked.
+    ///
+    /// Everything else is deliberately left to propagate. <see
+    /// cref="Services.IControlChannel"/> makes failure a state rather than an
+    /// exception, so an exception arriving here means an implementation broke
+    /// that contract, and swallowing it would leave the interface showing a
+    /// stale state with no indication that anything went wrong. That is the
+    /// same judgement <see cref="Contracts.Unreachable"/> makes: a broken
+    /// invariant is loud.
+    /// </remarks>
+    public async void Execute(object? parameter)
+    {
+        try
+        {
+            await ExecuteAsync(CancellationToken.None);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
 
     public async Task ExecuteAsync(CancellationToken cancellationToken)
     {

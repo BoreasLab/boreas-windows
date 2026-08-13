@@ -64,4 +64,25 @@ public partial class App : Application
         _window = new MainWindow();
         _window.Activate();
     }
+
+    /// <summary>
+    /// Releases what <see cref="OnLaunched"/> acquired, in reverse.
+    /// </summary>
+    /// <remarks>
+    /// Called from the window's Closed handler, which is the only moment this
+    /// process has between "the user is finished" and exit. Until now nothing
+    /// released either: the channel was created and abandoned, which the sample
+    /// channel survives because a leaked timer dies with the process, and which
+    /// the pipe client will not, because abandoning a pipe makes every exit
+    /// look to the service like a client that crashed.
+    ///
+    /// Order matters. The shell unsubscribes from the channel before the
+    /// channel is disposed, so nothing is left holding a handler on an object
+    /// that has closed its stream.
+    /// </remarks>
+    public static void Shutdown()
+    {
+        Shell?.Dispose();
+        Channel?.Dispose();
+    }
 }

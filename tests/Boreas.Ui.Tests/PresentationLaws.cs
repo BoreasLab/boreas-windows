@@ -29,7 +29,7 @@ public sealed class PresentationLaws
         new ControlChannelState.Connected(ProtocolVersion: 1),
         new ControlChannelState.Unavailable(AnyError),
         new ControlChannelState.Unauthorized(),
-        new ControlChannelState.VersionMismatch(ClientVersion: 1, ServiceVersion: 2),
+        new ControlChannelState.VersionMismatch(ServiceVersion: ControlProtocol.Version + 1),
     ];
 
     /// <summary>
@@ -291,7 +291,7 @@ public sealed class PresentationLaws
     {
         Assert.NotNull(ChannelPresentation.For(new ControlChannelState.Unavailable(AnyError)).Banner!.ActionLabel);
         Assert.Null(ChannelPresentation.For(new ControlChannelState.Unauthorized()).Banner!.ActionLabel);
-        Assert.Null(ChannelPresentation.For(new ControlChannelState.VersionMismatch(1, 2)).Banner!.ActionLabel);
+        Assert.Null(ChannelPresentation.For(new ControlChannelState.VersionMismatch(ControlProtocol.Version + 1)).Banner!.ActionLabel);
     }
 
     /// <summary>
@@ -319,5 +319,67 @@ public sealed class PresentationLaws
             Enum.GetValues<ControlEventKind>().Cast<ControlEventKind?>(),
             DiagnosticsViewModel.FilterOrder.Skip(1));
         Assert.Null(DiagnosticsViewModel.FilterOrder[0]);
+    }
+
+    /// <summary>
+    /// Wire names round-trip, and every field has one.
+    /// </summary>
+    /// <remarks>
+    /// The two directions are separate switches, so this is what keeps them
+    /// agreeing. It also fixes the names: changing one without the other, or
+    /// adding a field and forgetting its name, fails here rather than at the
+    /// pipe, where the symptom would be a service message that silently
+    /// attaches to no field.
+    /// </remarks>
+    [Fact]
+    public void Every_configuration_field_round_trips_through_its_wire_name()
+    {
+        foreach (var expected in Enum.GetValues<ConfigField>())
+        {
+            Assert.Equal(expected, ConfigField.FromWireName(expected.WireName));
+        }
+
+        // Distinct names, so the round trip above is a bijection and not a
+        // collapse onto one field.
+        Assert.Equal(
+            Enum.GetValues<ConfigField>().Length,
+            Enum.GetValues<ConfigField>().Select(f => f.WireName).Distinct().Count());
+    }
+
+    /// <summary>
+    /// A name from a newer service is version skew, not a defect: it parses to
+    /// nothing, so the message is shown without being pinned to a field.
+    /// </summary>
+    [Theory]
+    [InlineData("")]
+    [InlineData("adapterName")]
+    [InlineData("something_added_later")]
+    public void An_unknown_wire_name_denotes_no_field(string name) =>
+        Assert.Null(ConfigField.FromWireName(name));
+
+    [Fact]
+    public void An_unknown_wire_name_is_not_invented_from_null() =>
+        Assert.Null(ConfigField.FromWireName(null));
+
+    /// <summary>
+    /// A version mismatch reports this client's actual version. It used to be
+    /// a constructor parameter, so the state could carry a number that was
+    /// nobody's.
+    /// </summary>
+    [Fact]
+    public void A_version_mismatch_reports_the_version_this_client_speaks()
+    {
+        var mismatch = new ControlChannelState.VersionMismatch(ServiceVersion: 99);
+
+        Assert.Equal(ControlProtocol.Version, mismatch.ClientVersion);
+        Assert.Equal(99, mismatch.ServiceVersion);
+
+        // And the text the user reads says the same thing, rather than
+        // rendering a version from somewhere else.
+        var presentation = StatusPresentation.For(mismatch, new ServiceState.Stopped());
+        Assert.Contains(
+            ControlProtocol.Version.ToString(),
+            presentation.Detail,
+            StringComparison.Ordinal);
     }
 }
