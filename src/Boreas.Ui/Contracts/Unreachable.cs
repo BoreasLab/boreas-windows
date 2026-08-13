@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace Boreas.Ui.Contracts;
 
 /// <summary>
@@ -15,9 +17,14 @@ namespace Boreas.Ui.Contracts;
 /// still need a final arm. This is that arm: unreachable by construction,
 /// loud if construction is ever wrong, and never a silent fallback that
 /// returns a plausible-looking default.
+///
+/// <see cref="UnreachableException"/> rather than a hand-picked
+/// <see cref="InvalidOperationException"/>: the BCL has a type whose whole
+/// meaning is "control reached a point the author proved it could not", and a
+/// reader who sees it in a stack trace learns that immediately.
 /// </remarks>
 internal static class Unreachable
 {
-    public static InvalidOperationException Value<T>(T value) =>
+    public static UnreachableException Value<T>(T value) =>
         new($"Unhandled {typeof(T).Name} value: {value}");
 }

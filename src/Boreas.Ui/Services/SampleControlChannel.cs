@@ -32,7 +32,12 @@ public sealed class SampleControlChannel : IControlChannel, IDisposable
         Channel = new ControlChannelState.Connected(ProtocolVersion: 1);
         State = new ServiceState.Stopped();
         Record(ControlEventKind.Channel, "Control channel connected (sample).");
-        _tick = new Timer(_ => Advance(), state: null, dueTime: 1000, period: 1000);
+        // Advance runs on the UI thread, not the timer's pool thread. It writes
+        // _counters, a 32-byte struct the UI reads through Snapshot, and a
+        // struct that wide is not written atomically: a render landing mid-write
+        // could show half of one reading and half of the next. Marshalling
+        // first removes the race rather than locking around it.
+        _tick = new Timer(_ => _dispatcher.TryEnqueue(Advance), state: null, dueTime: 1000, period: 1000);
     }
 
     public ControlChannelState Channel { get; private set; }

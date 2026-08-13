@@ -293,4 +293,31 @@ public sealed class PresentationLaws
         Assert.Null(ChannelPresentation.For(new ControlChannelState.Unauthorized()).Banner!.ActionLabel);
         Assert.Null(ChannelPresentation.For(new ControlChannelState.VersionMismatch(1, 2)).Banner!.ActionLabel);
     }
+
+    /// <summary>
+    /// Every selector array names every value of its enum.
+    /// </summary>
+    /// <remarks>
+    /// The property that makes those selectors total. Each maps its enum to a
+    /// control index with one array read forwards and backwards, which removes
+    /// any chance of the two directions disagreeing but leaves one hole:
+    /// <see cref="Array.IndexOf{T}(T[], T)"/> answers -1 for a value the array
+    /// omits, and a control asked to select -1 shows nothing selected. C# has
+    /// no way to require an array to cover an enum, so it is required here. Add
+    /// a route mode or an event kind without adding its segment and this fails,
+    /// which is the notification the compiler cannot give.
+    /// </remarks>
+    [Fact]
+    public void Every_selector_covers_its_closed_set()
+    {
+        Assert.Equal(Enum.GetValues<RouteMode>(), ConfigurationViewModel.RouteOrder);
+        Assert.Equal(Enum.GetValues<EgressPolicy>(), ConfigurationViewModel.EgressOrder);
+
+        // Null leads the filter segments: "everything" is a choice, so the
+        // array is one longer than the enum it covers.
+        Assert.Equal(
+            Enum.GetValues<ControlEventKind>().Cast<ControlEventKind?>(),
+            DiagnosticsViewModel.FilterOrder.Skip(1));
+        Assert.Null(DiagnosticsViewModel.FilterOrder[0]);
+    }
 }

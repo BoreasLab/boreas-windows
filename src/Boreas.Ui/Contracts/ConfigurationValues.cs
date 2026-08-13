@@ -66,8 +66,10 @@ public sealed record TunnelAddress
             return null;
         }
 
-        // One split, one parse each. Liberal about surrounding whitespace,
-        // strict about the shape, because the shape is what carries meaning.
+        // The list pattern is the specification: CIDR is exactly two parts,
+        // and saying so in the pattern is what makes the rest of this total.
+        // A span slice around IndexOf would save two small allocations on a
+        // path that handles a text box, and would state the arity nowhere.
         if (text.Split('/', StringSplitOptions.TrimEntries) is not [var host, var prefix]
             || !IPAddress.TryParse(host, out var address))
         {
@@ -105,17 +107,28 @@ public sealed record PacketSize
 
     public int Value { get; }
 
-    public static PacketSize? TryParse(string? raw)
-    {
-        // Accepts "1,420", " 1420 " and "1420": a grouping separator is how
-        // people write numbers, not a mistake for them to correct.
-        var digits = new string((raw ?? string.Empty).Where(char.IsAsciiDigit).ToArray());
-
-        return int.TryParse(digits, NumberStyles.None, CultureInfo.InvariantCulture, out var value)
-               && value is >= Minimum and <= Maximum
+    /// <summary>
+    /// Digits, and nothing else.
+    /// </summary>
+    /// <remarks>
+    /// This field used to accept grouping separators, which meant a bespoke
+    /// scanner and an ambiguity: "1.4.2.0" and "abc1420" both read as 1420.
+    /// That liberality was never earned. The domain is four digits between
+    /// 1280 and 9000, nobody groups a number that size, and no supported
+    /// spelling of an MTU contains anything but digits. Constraining the
+    /// format is what makes the parser one total expression instead of a loop
+    /// with a separator table, and the field's own requirement sentence is
+    /// what tells the user so.
+    ///
+    /// DNS keeps its liberal split, because there people genuinely paste lists
+    /// in several spellings and no canonical one exists. That is the test:
+    /// real variance in what users have, not variance the parser invented.
+    /// </remarks>
+    public static PacketSize? TryParse(string? raw) =>
+        int.TryParse(raw.AsSpan().Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out var value)
+        && value is >= Minimum and <= Maximum
             ? new PacketSize(value)
             : null;
-    }
 
     public override string ToString() => Value.ToString(CultureInfo.InvariantCulture);
 }
@@ -138,15 +151,18 @@ public sealed record DnsServers
 
     public ImmutableArray<IPAddress> Value { get; }
 
+    /// <summary>
+    /// The one liberal parse in this file, and the only one with evidence
+    /// behind it: DNS servers get pasted from provider pages, ipconfig output
+    /// and other config files, and those genuinely differ in separator. There
+    /// is no canonical spelling to constrain the field to, so the field absorbs
+    /// the variance. Contrast <see cref="PacketSize"/>, which has one spelling
+    /// and therefore one parse.
+    /// </summary>
     public static DnsServers? TryParse(string? raw)
     {
         var entries = (raw ?? string.Empty)
             .Split(Separators, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-        if (entries.Length == 0)
-        {
-            return Empty;
-        }
 
         var parsed = ImmutableArray.CreateBuilder<IPAddress>(entries.Length);
 
@@ -160,7 +176,7 @@ public sealed record DnsServers
             parsed.Add(address);
         }
 
-        return new DnsServers(parsed.MoveToImmutable());
+        return entries.Length == 0 ? Empty : new DnsServers(parsed.MoveToImmutable());
     }
 
     /// <summary>The one spelling the service is ever sent.</summary>
@@ -272,31 +288,32 @@ public static class ConfigurationParser
         _ => throw Unreachable.Value(field),
     };
 
-    /// <summary>
-    /// Parses the whole draft. One pass over the four fields, collecting every
-    /// message rather than stopping at the first, because a person fixing a
-    /// form wants to see all of it at once.
-    /// </summary>
+    /// <summary>Parses the whole draft, in one pass over the four fields.</summary>
     public static ConfigurationParse Parse(ConfigurationDraft draft)
     {
-        if (AdapterName.TryParse(draft.AdapterName) is { } adapter
-            && TunnelAddress.TryParse(draft.InterfaceAddress) is { } address
-            && PacketSize.TryParse(draft.Mtu) is { } packetSize
-            && DnsServers.TryParse(draft.DnsServers) is { } dns)
+        // Every field read once, before anything is decided. The short-circuit
+        // conjunction this replaces stopped at the first failure and then had
+        // to re-parse all four through Validate to report them, so a rejected
+        // form parsed twice.
+        var adapter = AdapterName.TryParse(draft.AdapterName);
+        var address = TunnelAddress.TryParse(draft.InterfaceAddress);
+        var packetSize = PacketSize.TryParse(draft.Mtu);
+        var dns = DnsServers.TryParse(draft.DnsServers);
+
+        if (adapter is not null && address is not null && packetSize is not null && dns is not null)
         {
             return new ConfigurationParse.Valid(
                 new ValidatedConfiguration(adapter, address, packetSize, dns, draft.Routes, draft.Egress));
         }
 
+        // Accumulated rather than fail-fast: a person fixing a form wants to
+        // see all of it at once.
         var errors = new Dictionary<ConfigField, string>(AllFields.Length);
 
-        foreach (var field in AllFields)
-        {
-            if (Validate(field, draft) is { } message)
-            {
-                errors[field] = message;
-            }
-        }
+        if (adapter is null) { errors[ConfigField.Adapter] = AdapterName.Requirement; }
+        if (address is null) { errors[ConfigField.Address] = TunnelAddress.Requirement; }
+        if (packetSize is null) { errors[ConfigField.Mtu] = PacketSize.Requirement; }
+        if (dns is null) { errors[ConfigField.Dns] = DnsServers.Requirement; }
 
         return new ConfigurationParse.Invalid(errors);
     }

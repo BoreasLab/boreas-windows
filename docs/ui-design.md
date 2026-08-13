@@ -149,8 +149,12 @@ object. A degraded bypass appears as a separate banner below, because it is a
 separate claim.
 
 **Network.** One column, labels above fields, sections with headings. Input is
-parsed rather than rejected: an MTU typed as "1,420", an address pasted with
-whitespace, DNS servers separated however someone happens to separate them.
+parsed rather than rejected where the variance is real: an address pasted with
+whitespace, DNS servers separated however someone happens to separate them,
+because those genuinely arrive in several spellings. Where a field has one
+spelling the format is narrowed instead. An MTU is digits, and the parser that
+used to accept "1,420" also read "1.4.2.0" as 1420, which is liberality bought
+with ambiguity and paid for in a hand-written scanner.
 Validation runs on blur, then on every keystroke once a field has errored.
 Nothing is disabled while the tunnel runs; a change that needs a restart is
 accepted and then says so. A rejection from the service keeps every typed

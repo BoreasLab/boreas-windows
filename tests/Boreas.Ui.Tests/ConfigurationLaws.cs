@@ -17,16 +17,22 @@ public sealed class ConfigurationLaws
     }
 
     /// <summary>
-    /// Be liberal in what you accept. Every one of these is unambiguously the
-    /// same number, and rejecting any of them would be the system making its
-    /// formatting preference the user's problem.
+    /// A packet size is digits. Surrounding whitespace is an artefact of
+    /// pasting and is absorbed; nothing else is.
     /// </summary>
+    /// <remarks>
+    /// This law used to admit "1,420" and "1 420" too, on a be-liberal
+    /// argument that did not survive being asked for evidence. Nobody groups a
+    /// four-digit MTU, so the liberality bought no real input and cost a
+    /// bespoke scanner plus an ambiguity, since discarding non-digits also read
+    /// "1.4.2.0" as 1420. Constraining the format is the cheaper half of
+    /// parse-do-not-validate: the easiest format to parse correctly is the one
+    /// with a single spelling.
+    /// </remarks>
     [Theory]
     [InlineData("1420")]
     [InlineData(" 1420 ")]
-    [InlineData("1,420")]
-    [InlineData("1 420")]
-    public async Task An_unambiguous_packet_size_is_accepted_however_it_is_written(string typed)
+    public async Task A_packet_size_is_digits_and_surrounding_space(string typed)
     {
         var channel = new RecordingChannel(new ConfigurationOutcome.Applied());
         var model = await LoadedAsync(channel);
@@ -74,7 +80,7 @@ public sealed class ConfigurationLaws
     /// re-tested per field through the view model.
     /// </summary>
     [Theory]
-    [InlineData("Boreas", "10.7.0.2/24", "1,420", "10.7.0.1, 10.7.0.2")]
+    [InlineData("Boreas", "10.7.0.2/24", "1420", "10.7.0.1, 10.7.0.2")]
     [InlineData("  Boreas  ", "  fd00::2/64  ", " 9000 ", "")]
     [InlineData("Tunnel", "10.0.0.1/8", "1280", "1.1.1.1;8.8.8.8")]
     public void Parsing_is_idempotent_through_the_canonical_rendering(
@@ -104,7 +110,7 @@ public sealed class ConfigurationLaws
 
         Assert.NotNull(AdapterName.TryParse(" Boreas "));
         Assert.NotNull(TunnelAddress.TryParse("fd00::2/64"));
-        Assert.NotNull(PacketSize.TryParse("1,420"));
+        Assert.NotNull(PacketSize.TryParse(" 1420 "));
         Assert.Equal(DnsServers.Empty, DnsServers.TryParse("   "));
     }
 
@@ -309,6 +315,11 @@ public sealed class ConfigurationLaws
     [InlineData("9001")]
     [InlineData("")]
     [InlineData("abc")]
+    // Read as 1420 while non-digits were being discarded. Each is now a
+    // rejection with the field's requirement sentence beside it.
+    [InlineData("abc1420")]
+    [InlineData("1.4.2.0")]
+    [InlineData("1,420")]
     public async Task A_packet_size_outside_the_carriable_range_is_rejected(string typed)
     {
         var model = await LoadedAsync(new RecordingChannel(new ConfigurationOutcome.Applied()));

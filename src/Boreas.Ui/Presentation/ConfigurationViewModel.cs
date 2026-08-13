@@ -9,10 +9,12 @@ namespace Boreas.Ui.Presentation;
 /// <remarks>
 /// Three rules shape it.
 ///
-/// Parse, do not reject. An address pasted with surrounding whitespace, an MTU
-/// typed as "1,420", DNS servers separated by commas or spaces or newlines:
-/// all of these are what the user meant, and normalising them is the system's
-/// job rather than theirs.
+/// Parse, do not reject, where the variance is real. An address pasted with
+/// surrounding whitespace and DNS servers separated by commas or spaces or
+/// newlines are what the user meant, and normalising them is the system's job
+/// rather than theirs. Where a field has one spelling, the format is narrowed
+/// instead: a parser written to absorb variance nobody produces is complexity
+/// bought with nothing.
 ///
 /// Validate at the right moment. On blur for a finished field, on submit for
 /// the form, and once a field has errored, on every keystroke so the error
@@ -86,30 +88,28 @@ public sealed class ConfigurationViewModel : ObservableObject
         }
     } = EgressPolicy.Direct;
 
-    /// <summary>
-    /// The radio group's index, mapped both ways over the closed enum so the
-    /// order the buttons appear in is stated once rather than assumed.
-    /// </summary>
+    /// <summary>The order the radio buttons appear in, stated once each.</summary>
+    /// <remarks>
+    /// Read in both directions, so the mapping out and the mapping back cannot
+    /// disagree. <c>PresentationLaws</c> asserts each array names every value
+    /// of its enum, which is what rules out the -1
+    /// <see cref="Array.IndexOf{T}(T[], T)"/> would otherwise return, and what
+    /// the discarded switch arms were only pretending to do.
+    /// </remarks>
+    public static readonly RouteMode[] RouteOrder = [RouteMode.Default, RouteMode.Selected];
+
+    public static readonly EgressPolicy[] EgressOrder = [EgressPolicy.Direct, EgressPolicy.Relay];
+
     public int RouteIndex
     {
-        get => Routes switch
-        {
-            RouteMode.Default => 0,
-            RouteMode.Selected => 1,
-            _ => throw Unreachable.Value(Routes),
-        };
-        set => Routes = value == 1 ? RouteMode.Selected : RouteMode.Default;
+        get => Array.IndexOf(RouteOrder, Routes);
+        set => Routes = RouteOrder[Math.Clamp(value, 0, RouteOrder.Length - 1)];
     }
 
     public int EgressIndex
     {
-        get => Egress switch
-        {
-            EgressPolicy.Direct => 0,
-            EgressPolicy.Relay => 1,
-            _ => throw Unreachable.Value(Egress),
-        };
-        set => Egress = value == 1 ? EgressPolicy.Relay : EgressPolicy.Direct;
+        get => Array.IndexOf(EgressOrder, Egress);
+        set => Egress = EgressOrder[Math.Clamp(value, 0, EgressOrder.Length - 1)];
     }
 
     /// <summary>

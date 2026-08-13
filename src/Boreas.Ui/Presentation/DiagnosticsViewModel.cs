@@ -42,30 +42,36 @@ public sealed class DiagnosticsViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// The filter as the segmented control indexes it, mapped both ways over
-    /// the closed kind set so the order is stated once.
+    /// The segments, in the order they appear. Null is first: "everything" is
+    /// a filter choice, not the absence of one.
     /// </summary>
+    public static readonly ControlEventKind?[] FilterOrder =
+    [
+        null,
+        ControlEventKind.Transition,
+        ControlEventKind.Command,
+        ControlEventKind.Channel,
+        ControlEventKind.Failure,
+    ];
+
+    /// <summary>
+    /// The filter as the segmented control indexes it.
+    /// </summary>
+    /// <remarks>
+    /// One array read in both directions. The switch out and the switch back it
+    /// replaces were two statements of one order, kept in agreement by nothing
+    /// but attention, and the getter threw on a value the setter would happily
+    /// have produced. A round trip through one array cannot disagree with
+    /// itself, and <c>PresentationLaws</c> asserts the array names every kind,
+    /// which is what rules out the -1 <see cref="Array.IndexOf{T}(T[], T)"/>
+    /// would otherwise return.
+    /// </remarks>
     public int FilterIndex
     {
-        get => Filter switch
-        {
-            null => 0,
-            ControlEventKind.Transition => 1,
-            ControlEventKind.Command => 2,
-            ControlEventKind.Channel => 3,
-            ControlEventKind.Failure => 4,
-            _ => throw Unreachable.Value(Filter),
-        };
+        get => Array.IndexOf(FilterOrder, Filter);
         set
         {
-            Filter = value switch
-            {
-                1 => ControlEventKind.Transition,
-                2 => ControlEventKind.Command,
-                3 => ControlEventKind.Channel,
-                4 => ControlEventKind.Failure,
-                _ => null,
-            };
+            Filter = FilterOrder[Math.Clamp(value, 0, FilterOrder.Length - 1)];
             Raise();
         }
     }
