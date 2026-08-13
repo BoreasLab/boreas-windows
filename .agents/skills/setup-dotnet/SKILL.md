@@ -196,10 +196,12 @@ Build outputs stay in the repository and are removed with
   with `cannot execute binary file: Exec format error`. This is not a workflow
   defect; CI runs on x64. `.github/scripts/zizmor.sh` works on both.
 
-- **Do not add a skill under `.claude/skills/`.** That path is a symlink into
-  the `.github/skills` submodule, which is vendored from an upstream repository
-  this repository does not own. See the AGENTS.md section naming the files this
-  repository does not own.
+- **Repository-owned skills live in `.agents/skills/`, not `.claude/skills/`.**
+  The latter is a symlink into the `.github/skills` submodule, vendored from an
+  upstream repository this one does not own, so a skill written here would be a
+  change to somebody else's repository. Claude Code does not scan
+  `.agents/skills/`, so AGENTS.md points at it by hand; read the skill directly
+  when working in this repository under an agent that has not loaded it.
 
 ## Cost
 

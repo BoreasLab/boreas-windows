@@ -41,8 +41,26 @@ you will change before introducing code or dependencies.
   workflow; do not bump it by hand.
 - `.claude/skills` is a symlink to `.github/skills`, so it is the same upstream
   content under another name. A skill written for this repository does not go
-  there. `docs/setup-dotnet/SKILL.md` is written in skill format and kept under
-  `docs/` for exactly this reason.
+  there; see the section below for where it does go.
+
+## Skills This Repository Owns
+
+Repository-owned skills live in `.agents/skills/<name>/SKILL.md`.
+
+| Skill | Read before |
+| --- | --- |
+| [setup-dotnet](.agents/skills/setup-dotnet/SKILL.md) | running any `dotnet` command when `command -v dotnet` finds nothing. Installs the SDK per-user under a temporary root, pinned from `global.json`, without sudo and without writing to `$HOME`. |
+
+`.agents/skills/` is where OpenAI Codex looks: it scans that path in every
+directory from the working directory up to the repository root. Claude Code
+does not scan it, and reads `.claude/skills/` and `~/.claude/skills/` instead.
+That split is why this table exists rather than a bare directory: a Claude Code
+agent finds these skills by reading AGENTS.md, which it already loads, and then
+opening the file.
+
+`.agents/skills/` is chosen over `.claude/skills/` because the latter is a
+symlink into a submodule this repository does not own. One location that half
+the agents discover automatically beats a location no agent may write to.
 
 ## Boundary Rules
 
