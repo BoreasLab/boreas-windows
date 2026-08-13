@@ -1,3 +1,4 @@
+using System.Numerics;
 using Boreas.Ui.Contracts;
 using Boreas.Ui.Services;
 
@@ -202,18 +203,27 @@ public sealed record SessionFacts(
 
     private static readonly string[] Units = ["bytes", "KB", "MB", "GB", "TB"];
 
+    /// <summary>
+    /// A byte count in the largest unit that leaves it above one.
+    /// </summary>
+    /// <remarks>
+    /// The unit is the value's magnitude in base 1024, which is its base-2
+    /// logarithm in groups of ten, so the hardware instruction behind
+    /// <see cref="BitOperations.Log2(ulong)"/> answers it outright and the
+    /// divide-until-small loop that used to compute it is gone.
+    /// <c>Log2(0)</c> is 0 by convention, which is the answer this wants: no
+    /// bytes are still bytes.
+    ///
+    /// Scaling by a shift rather than by repeated division keeps the result
+    /// identical rather than merely close: the divisor is a power of two, so
+    /// the quotient is exact in both spellings.
+    /// </remarks>
     private static string FormatBytes(ulong value)
     {
-        double scaled = value;
-        var unit = 0;
-        while (scaled >= 1024 && unit < Units.Length - 1)
-        {
-            scaled /= 1024;
-            unit++;
-        }
+        var unit = Math.Min(BitOperations.Log2(value) / 10, Units.Length - 1);
 
         return unit == 0
             ? $"{value:N0} {Units[unit]}"
-            : $"{scaled:N1} {Units[unit]}";
+            : $"{value / (double)(1UL << (unit * 10)):N1} {Units[unit]}";
     }
 }

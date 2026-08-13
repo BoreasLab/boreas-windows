@@ -12,16 +12,13 @@ namespace Boreas.Ui.Presentation;
 /// first is in flight does nothing, which is what stops a double-click from
 /// becoming two start commands the service then has to serialise.
 /// </remarks>
-public sealed class AsyncCommand : ObservableObject, ICommand
+public sealed class AsyncCommand(Func<CancellationToken, Task> execute, Func<bool>? canExecute = null)
+    : ObservableObject, ICommand
 {
-    private readonly Func<CancellationToken, Task> _execute;
-    private readonly Func<bool> _canExecute;
+    private readonly Func<CancellationToken, Task> _execute = execute;
 
-    public AsyncCommand(Func<CancellationToken, Task> execute, Func<bool>? canExecute = null)
-    {
-        _execute = execute;
-        _canExecute = canExecute ?? (static () => true);
-    }
+    /// <summary>Always executable unless the caller said otherwise.</summary>
+    private readonly Func<bool> _canExecute = canExecute ?? (static () => true);
 
     public event EventHandler? CanExecuteChanged;
 

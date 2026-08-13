@@ -313,6 +313,20 @@ public sealed class PresentationLaws
         Assert.Equal(Enum.GetValues<RouteMode>(), ConfigurationViewModel.RouteOrder);
         Assert.Equal(Enum.GetValues<EgressPolicy>(), ConfigurationViewModel.EgressOrder);
 
+        // Not only a selector order. The network form keeps one state per field
+        // in an array positioned by this, so a field the array omits would have
+        // nowhere to record its message and would throw when the user left it.
+        Assert.Equal(Enum.GetValues<ConfigField>(), ConfigurationParser.AllFields.ToArray());
+
+        // And the array is indexed by the field's own value, which is what
+        // makes that lookup O(1) rather than a scan. Give a member a
+        // hand-assigned value and it lands in another field's slot, or past
+        // the end of the array; this is where that stops.
+        foreach (var (position, field) in ConfigurationParser.AllFields.Index())
+        {
+            Assert.Equal(position, (int)field);
+        }
+
         // Null leads the filter segments: "everything" is a choice, so the
         // array is one longer than the enum it covers.
         Assert.Equal(

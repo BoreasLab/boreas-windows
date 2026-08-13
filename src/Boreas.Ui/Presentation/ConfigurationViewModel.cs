@@ -26,12 +26,33 @@ namespace Boreas.Ui.Presentation;
 public sealed class ConfigurationViewModel : ObservableObject
 {
     private readonly IControlChannel _channel;
-    private readonly Dictionary<ConfigField, string> _errors = [];
-    private readonly HashSet<ConfigField> _touched = [];
+
+    /// <summary>
+    /// One state per field, positioned by <see cref="ConfigurationParser.AllFields"/>.
+    /// </summary>
+    /// <remarks>
+    /// This was two collections: a dictionary of messages and a set of
+    /// finished fields. Nothing held them in agreement, so a message on a
+    /// field the user had never finished was representable and would have
+    /// shown as an error under a box nobody had left yet. It cannot be
+    /// written now, because carrying a message and being finished are the
+    /// same fact in <see cref="FieldState.Rejected"/> rather than two facts
+    /// in two places.
+    ///
+    /// An array over the four fields rather than a hash structure. The domain
+    /// is closed and dense, so the field's own value is already a perfect hash
+    /// of itself: <see cref="Position"/> indexes with it directly, which is
+    /// O(1) with no hashing, no bucket, and no allocation, where the dictionary
+    /// paid for a hash to rediscover a number it had been handed. Every field
+    /// also always has a state, so "absent from the dictionary" stops being a
+    /// third way to say untouched.
+    /// </remarks>
+    private readonly FieldState[] _fields = new FieldState[ConfigurationParser.AllFields.Length];
 
     public ConfigurationViewModel(IControlChannel channel)
     {
         _channel = channel;
+        Forget();
         Apply = new AsyncCommand(ApplyAsync);
         Revert = new AsyncCommand(LoadAsync);
     }
@@ -136,13 +157,13 @@ public sealed class ConfigurationViewModel : ObservableObject
         private set => Set(ref field, value);
     }
 
-    public string? AdapterError => _errors.GetValueOrDefault(ConfigField.Adapter);
+    public string? AdapterError => MessageFor(ConfigField.Adapter);
 
-    public string? AddressError => _errors.GetValueOrDefault(ConfigField.Address);
+    public string? AddressError => MessageFor(ConfigField.Address);
 
-    public string? MtuError => _errors.GetValueOrDefault(ConfigField.Mtu);
+    public string? MtuError => MessageFor(ConfigField.Mtu);
 
-    public string? DnsError => _errors.GetValueOrDefault(ConfigField.Dns);
+    public string? DnsError => MessageFor(ConfigField.Dns);
 
     public bool HasAdapterError => AdapterError is not null;
 
@@ -173,14 +194,24 @@ public sealed class ConfigurationViewModel : ObservableObject
     /// The first field with an error, so focus can be moved there on submit.
     /// </summary>
     /// <remarks>
-    /// The lambda parameter is deliberately not called <c>field</c>. Inside a
-    /// property accessor that identifier is now the contextual keyword for the
-    /// synthesized backing field, and shadowing it here would either fail to
-    /// compile or silently bind to the wrong thing.
+    /// The states array is positioned by <see cref="ConfigurationParser.AllFields"/>,
+    /// so one array read backwards turns a position into the field that holds
+    /// it, exactly as the selector orders elsewhere in this file do. That is
+    /// what removes the <c>Cast&lt;ConfigField?&gt;</c> this used to need: the
+    /// cast existed only so <c>FirstOrDefault</c> would answer null instead of
+    /// <see cref="ConfigField.Adapter"/> when nothing matched, and it boxed
+    /// every field and allocated three iterators to say so.
+    ///
+    /// A scan, and the right one: "first in form order" is a question about
+    /// the order, so no index answers it faster than reading the order. O(4)
+    /// over four contiguous references, no allocation, on a submit.
     /// </remarks>
-    public ConfigField? FirstErrorField => ConfigurationParser.AllFields
-        .Cast<ConfigField?>()
-        .FirstOrDefault(candidate => _errors.ContainsKey(candidate!.Value));
+    public ConfigField? FirstErrorField =>
+        Array.FindIndex(_fields, static state => state is FieldState.Rejected) switch
+        {
+            < 0 => null,
+            var position => ConfigurationParser.AllFields[position],
+        };
 
     public async Task LoadAsync(CancellationToken cancellationToken = default)
     {
@@ -189,8 +220,7 @@ public sealed class ConfigurationViewModel : ObservableObject
         // Cleared before the assignments, not after: every setter revalidates,
         // and a field nobody has touched yet must not acquire a message just
         // because the service supplied its value.
-        _errors.Clear();
-        _touched.Clear();
+        Forget();
 
         AdapterName = draft.AdapterName;
         InterfaceAddress = draft.InterfaceAddress;
@@ -207,8 +237,7 @@ public sealed class ConfigurationViewModel : ObservableObject
     /// <summary>Called when a field loses focus, which is when it is finished.</summary>
     public void MarkTouched(ConfigField field)
     {
-        _touched.Add(field);
-        Validate(field);
+        Finish(field);
         RaiseMessages();
     }
 
@@ -228,9 +257,9 @@ public sealed class ConfigurationViewModel : ObservableObject
     {
         // Only speak up about a field the user has already finished once.
         // Telling someone their half-typed address is invalid is noise.
-        if (_touched.Contains(field))
+        if (_fields[Position(field)] is not FieldState.Untouched)
         {
-            Validate(field);
+            Finish(field);
             RaiseMessages();
         }
     }
@@ -244,33 +273,64 @@ public sealed class ConfigurationViewModel : ObservableObject
         Routes: Routes,
         Egress: Egress);
 
-    private void Validate(ConfigField field)
-    {
-        // One source of truth. The rule and its sentence live with the refined
-        // type, so a field can never report something the whole-form parse
-        // would disagree with.
-        var message = ConfigurationParser.Validate(field, CurrentDraft);
+    /// <summary>
+    /// Records a field as finished and stores the verdict on what it now holds.
+    /// </summary>
+    /// <remarks>
+    /// One source of truth. The rule and its sentence live with the refined
+    /// type, so a field can never report something the whole-form parse would
+    /// disagree with.
+    /// </remarks>
+    private void Finish(ConfigField field) =>
+        _fields[Position(field)] = ConfigurationParser.Validate(field, CurrentDraft) is { } message
+            ? new FieldState.Rejected(message)
+            : FieldState.Accepted.Instance;
 
-        if (message is null)
+    /// <summary>
+    /// Places service or parser messages on their fields.
+    /// </summary>
+    /// <remarks>
+    /// No second collection to mark the same fields finished: a message is only
+    /// carried by <see cref="FieldState.Rejected"/>, and a rejected field is a
+    /// finished one.
+    /// </remarks>
+    private void Reject(IReadOnlyDictionary<ConfigField, string> errors)
+    {
+        foreach (var (field, message) in errors)
         {
-            _errors.Remove(field);
-        }
-        else
-        {
-            _errors[field] = message;
+            _fields[Position(field)] = new FieldState.Rejected(message);
         }
     }
 
-    private void ValidateAll()
-    {
-        foreach (var field in ConfigurationParser.AllFields)
-        {
-            _touched.Add(field);
-            Validate(field);
-        }
+    /// <summary>Every field back to "the user has not finished with it".</summary>
+    private void Forget() => Array.Fill(_fields, FieldState.Untouched.Instance);
 
-        RaiseMessages();
-    }
+    private string? MessageFor(ConfigField field) =>
+        _fields[Position(field)] is FieldState.Rejected rejected ? rejected.Message : null;
+
+    /// <summary>
+    /// Where a field's state lives: the field's own value, used directly as
+    /// the array index.
+    /// </summary>
+    /// <remarks>
+    /// O(1) and branch-light, which is the point of an array over the
+    /// dictionary this replaced: a dense enum is already a perfect hash of
+    /// itself, so paying for a hash, or scanning
+    /// <see cref="ConfigurationParser.AllFields"/> for the value, would be
+    /// buying back what the type already gives away.
+    ///
+    /// It rests on one law: the field values are the dense positions
+    /// <see cref="ConfigurationParser.AllFields"/> names, in that order.
+    /// <c>PresentationLaws</c> asserts it, because a hand-assigned enum value
+    /// would otherwise put one field's message in another field's slot, or
+    /// past the end of the array. The bounds test keeps a value from outside
+    /// the domain loud in the codebase's own vocabulary rather than as a raw
+    /// index fault.
+    /// </remarks>
+    private static int Position(ConfigField field) =>
+        (uint)field < (uint)ConfigurationParser.AllFields.Length
+            ? (int)field
+            : throw Unreachable.Value(field);
 
     private async Task ApplyAsync(CancellationToken cancellationToken)
     {
@@ -281,11 +341,7 @@ public sealed class ConfigurationViewModel : ObservableObject
 
         if (parsed is ConfigurationParse.Invalid invalid)
         {
-            foreach (var (field, message) in invalid.Errors)
-            {
-                _touched.Add(field);
-                _errors[field] = message;
-            }
+            Reject(invalid.Errors);
 
             Outcome = null;
             RaiseMessages();
@@ -298,16 +354,11 @@ public sealed class ConfigurationViewModel : ObservableObject
         // The service is the authority on validity. Its field messages replace
         // whatever this side thought, and every typed value stays put.
         outcome.Match<object?>(
-            applied: _ => null,
-            restartRequired: _ => null,
+            applied: static _ => null,
+            restartRequired: static _ => null,
             rejected: r =>
             {
-                foreach (var (field, message) in r.FieldErrors)
-                {
-                    _touched.Add(field);
-                    _errors[field] = message;
-                }
-
+                Reject(r.FieldErrors);
                 return null;
             });
 
@@ -326,6 +377,48 @@ public sealed class ConfigurationViewModel : ObservableObject
         Raise(nameof(RouteIndex));
         Raise(nameof(EgressIndex));
         RaiseMessages();
+    }
+
+    /// <summary>
+    /// Everything the form can have to say about one field, closed.
+    /// </summary>
+    /// <remarks>
+    /// Three states, not a flag beside a nullable string. "Finished and it
+    /// parses" and "not finished yet" both show no message and are not the
+    /// same thing: the first revalidates on every keystroke, the second stays
+    /// silent until the user leaves the box. A boolean pair would have made
+    /// them indistinguishable in one direction and contradictory in the other.
+    ///
+    /// Private to the view model because it is editing state and not a
+    /// contract: nothing below this class, and nothing on the pipe, has an
+    /// opinion about whether a text box has been left yet.
+    /// </remarks>
+    private abstract record FieldState
+    {
+        private FieldState() { }
+
+        /// <summary>The user has not finished with it, so the form says nothing.</summary>
+        public sealed record Untouched : FieldState
+        {
+            /// <summary>
+            /// Shared. The state carries nothing, so one value serves every
+            /// field and every reset rather than allocating a record per
+            /// keystroke to say the same nothing.
+            /// </summary>
+            public static readonly Untouched Instance = new();
+        }
+
+        /// <summary>Finished, and what it holds parses.</summary>
+        public sealed record Accepted : FieldState
+        {
+            public static readonly Accepted Instance = new();
+        }
+
+        /// <summary>
+        /// Finished, and what it holds does not parse, carrying the one
+        /// sentence that says why.
+        /// </summary>
+        public sealed record Rejected(string Message) : FieldState;
     }
 }
 

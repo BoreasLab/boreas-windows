@@ -91,33 +91,31 @@ public sealed class DiagnosticsViewModel : ObservableObject, IDisposable
 
     private CollectionState<EventRow> Project()
     {
+        if (_isLoading)
         {
-            if (_isLoading)
-            {
-                return new CollectionState<EventRow>.Loading();
-            }
-
-            var all = _channel.Events;
-            if (all.IsEmpty)
-            {
-                return new CollectionState<EventRow>.Empty();
-            }
-
-            var matching = (Filter is { } kind ? all.Where(e => e.Kind == kind) : all.AsEnumerable())
-                .Select(EventRow.From)
-                .ToArray();
-
-            if (matching.Length == 0)
-            {
-                return new CollectionState<EventRow>.Filtered(ClearFilter);
-            }
-
-            // The service bounds its subscription; this window is what the
-            // client keeps. Saying so beats silently showing a truncated list.
-            return matching.Length >= ControlProtocol.EventWindow
-                ? new CollectionState<EventRow>.Partial(matching, LoadOlder)
-                : new CollectionState<EventRow>.Ready(matching);
+            return new CollectionState<EventRow>.Loading();
         }
+
+        var all = _channel.Events;
+        if (all.IsEmpty)
+        {
+            return new CollectionState<EventRow>.Empty();
+        }
+
+        var matching = (Filter is { } kind ? all.Where(e => e.Kind == kind) : all.AsEnumerable())
+            .Select(EventRow.From)
+            .ToArray();
+
+        if (matching.Length == 0)
+        {
+            return new CollectionState<EventRow>.Filtered(ClearFilter);
+        }
+
+        // The service bounds its subscription; this window is what the client
+        // keeps. Saying so beats silently showing a truncated list.
+        return matching.Length >= ControlProtocol.EventWindow
+            ? new CollectionState<EventRow>.Partial(matching, LoadOlder)
+            : new CollectionState<EventRow>.Ready(matching);
     }
 
     private void Invalidate()
