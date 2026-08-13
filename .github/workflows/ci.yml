@@ -5,7 +5,7 @@
 #   core  ubuntu, cheap. Builds and runs the OS-independent laws: the state
 #         machine the interface renders, the form's parser, and the design
 #         system measured out of the XAML. Also the boundary check: the test
-#         project targets plain net8.0 and compiles the functional core from
+#         project targets plain net10.0 and compiles the functional core from
 #         source, so a Microsoft.UI reference creeping into Contracts,
 #         Presentation or the channel abstraction fails here.
 #
@@ -76,21 +76,15 @@ jobs:
           dotnet build tests/Boreas.Ui.Tests/Boreas.Ui.Tests.csproj
           --configuration Release --no-restore
 
+      # No --logger: that is a VSTest option, and xunit v3 runs on Microsoft
+      # Testing Platform. A TRX report would mean adding the TRX extension
+      # package back; the runner already names every failure on stdout, which
+      # is where anyone reading a red build looks first.
       - name: Test
         shell: bash
         run: >-
           dotnet test tests/Boreas.Ui.Tests/Boreas.Ui.Tests.csproj
           --configuration Release --no-build
-          --logger "trx;LogFileName=core.trx"
-          --results-directory artifacts/test-results
-
-      - name: Upload test results
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: test-results
-          path: artifacts/test-results
-          retention-days: 14
 
   app:
     name: App (${{ matrix.configuration }}, ${{ matrix.platform }})

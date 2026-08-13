@@ -30,7 +30,7 @@ public sealed class StubChannel(ControlChannelState channel, ServiceState state)
         Task.FromResult(State);
 
     public Task<ConfigurationOutcome> ApplyConfigurationAsync(
-        ConfigurationDraft draft, CancellationToken cancellationToken = default) =>
+        ValidatedConfiguration configuration, CancellationToken cancellationToken = default) =>
         Task.FromResult<ConfigurationOutcome>(new ConfigurationOutcome.Applied());
 
     public Task<ConfigurationDraft> ReadConfigurationAsync(CancellationToken cancellationToken = default) =>
@@ -47,7 +47,7 @@ public sealed class RecordingChannel(ConfigurationOutcome outcome, Configuration
     private readonly ConfigurationDraft _initial = initial
         ?? new ConfigurationDraft("Boreas", "10.7.0.2/24", "1420", "10.7.0.1", RouteMode.Default, EgressPolicy.Direct);
 
-    public ConfigurationDraft? LastApplied { get; private set; }
+    public ValidatedConfiguration? LastApplied { get; private set; }
 
     public int ApplyCount { get; private set; }
 
@@ -72,9 +72,9 @@ public sealed class RecordingChannel(ConfigurationOutcome outcome, Configuration
         Task.FromResult(State);
 
     public Task<ConfigurationOutcome> ApplyConfigurationAsync(
-        ConfigurationDraft draft, CancellationToken cancellationToken = default)
+        ValidatedConfiguration configuration, CancellationToken cancellationToken = default)
     {
-        LastApplied = draft;
+        LastApplied = configuration;
         ApplyCount++;
         return Task.FromResult(outcome);
     }

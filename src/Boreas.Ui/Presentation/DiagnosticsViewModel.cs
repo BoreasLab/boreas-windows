@@ -16,7 +16,7 @@ namespace Boreas.Ui.Presentation;
 public sealed class DiagnosticsViewModel : ObservableObject, IDisposable
 {
     private readonly IControlChannel _channel;
-    private ControlEventKind? _filter;
+    private CollectionState<EventRow>? _events;
     private bool _isLoading = true;
 
     public DiagnosticsViewModel(IControlChannel channel)
@@ -31,12 +31,12 @@ public sealed class DiagnosticsViewModel : ObservableObject, IDisposable
     /// <summary>Null means every kind.</summary>
     public ControlEventKind? Filter
     {
-        get => _filter;
+        get;
         set
         {
-            if (Set(ref _filter, value))
+            if (Set(ref field, value))
             {
-                Raise(nameof(Events));
+                Invalidate();
             }
         }
     }
@@ -47,14 +47,14 @@ public sealed class DiagnosticsViewModel : ObservableObject, IDisposable
     /// </summary>
     public int FilterIndex
     {
-        get => _filter switch
+        get => Filter switch
         {
             null => 0,
             ControlEventKind.Transition => 1,
             ControlEventKind.Command => 2,
             ControlEventKind.Channel => 3,
             ControlEventKind.Failure => 4,
-            _ => throw Unreachable.Value(_filter),
+            _ => throw Unreachable.Value(Filter),
         };
         set
         {
@@ -70,9 +70,20 @@ public sealed class DiagnosticsViewModel : ObservableObject, IDisposable
         }
     }
 
-    public CollectionState<EventRow> Events
+    /// <summary>
+    /// The list, projected once per change.
+    /// </summary>
+    /// <remarks>
+    /// Filtering and projecting is O(n) in the event window, and the view
+    /// reads this several times per render: once to choose which of the six
+    /// regions is visible, once for the repeater, and again on every binding
+    /// refresh. Recomputing per read made a render O(kn) and allocated a fresh
+    /// row for every event each time. Now it is O(n) per change.
+    /// </remarks>
+    public CollectionState<EventRow> Events => _events ??= Project();
+
+    private CollectionState<EventRow> Project()
     {
-        get
         {
             if (_isLoading)
             {
@@ -85,7 +96,7 @@ public sealed class DiagnosticsViewModel : ObservableObject, IDisposable
                 return new CollectionState<EventRow>.Empty();
             }
 
-            var matching = (_filter is { } kind ? all.Where(e => e.Kind == kind) : all)
+            var matching = (Filter is { } kind ? all.Where(e => e.Kind == kind) : all)
                 .Select(EventRow.From)
                 .ToArray();
 
@@ -100,6 +111,12 @@ public sealed class DiagnosticsViewModel : ObservableObject, IDisposable
                 ? new CollectionState<EventRow>.Partial(matching, LoadOlder)
                 : new CollectionState<EventRow>.Ready(matching);
         }
+    }
+
+    private void Invalidate()
+    {
+        _events = null;
+        Raise(nameof(Events));
     }
 
     private const int EventWindow = 200;
@@ -132,10 +149,10 @@ public sealed class DiagnosticsViewModel : ObservableObject, IDisposable
     private async Task ReloadAsync(CancellationToken cancellationToken)
     {
         _isLoading = true;
-        Raise(nameof(Events));
+        Invalidate();
         await _channel.RefreshAsync(cancellationToken);
         _isLoading = false;
-        Raise(nameof(Events));
+        Invalidate();
     }
 
     private void ClearFilter() => Filter = null;
@@ -151,7 +168,7 @@ public sealed class DiagnosticsViewModel : ObservableObject, IDisposable
     private void OnChannelChanged(object? sender, EventArgs e)
     {
         _isLoading = false;
-        Raise(nameof(Events));
+        Invalidate();
     }
 
     public void Dispose() => _channel.Changed -= OnChannelChanged;
@@ -167,9 +184,14 @@ public sealed record EventRow(
     string Kind,
     string Summary,
     string NextStep,
-    bool HasNextStep,
     IReadOnlyList<string> SupportLines)
 {
+    /// <summary>
+    /// Derived, not stored. A stored flag alongside the text it describes is
+    /// a second copy of the same fact, and the two can be set out of step.
+    /// </summary>
+    public bool HasNextStep => NextStep.Length > 0;
+
     public static EventRow From(ControlEvent source)
     {
         var lines = new List<string>();
@@ -189,7 +211,6 @@ public sealed record EventRow(
             Kind: Describe(source.Kind),
             Summary: source.Summary,
             NextStep: source.Error?.NextStep ?? string.Empty,
-            HasNextStep: source.Error is not null,
             SupportLines: lines);
     }
 

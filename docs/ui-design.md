@@ -192,7 +192,7 @@ can and cannot do, including that closing it does not stop the tunnel.
 `.github/workflows/ci.yml` runs three jobs. Two of them bear on this document.
 
 `core` runs on Linux and builds `tests/Boreas.Ui.Tests`, which compiles the
-functional core from source into a plain `net8.0` project. That target is the
+functional core from source into a plain `net10.0` project. That target is the
 enforcement: `Contracts`, `Presentation` and the channel abstraction have to
 stay free of `Microsoft.UI`, because a reference to it stops compiling there.
 The suite then checks, against the source rather than against this document:
@@ -205,6 +205,8 @@ The suite then checks, against the source rather than against this document:
 - the form accepts every unambiguous spelling of a value, stays quiet until a
   field is finished, clears an error the moment it stops being true, and
   preserves entry through a rejection;
+- parsing a configuration is idempotent through its canonical rendering, and
+  each refined value rejects text that fails its own rule;
 - the six container states are distinguishable and carry items only where they
   should;
 - every contrast pairing in `Design/Tokens.xaml`, recomputed from the hex,
@@ -216,6 +218,27 @@ The suite then checks, against the source rather than against this document:
 
 `app` runs on Windows and is the only place WinUI 3 builds. It produces an
 unsigned artifact for inspection, not a release candidate.
+
+## Types that carry their own proof
+
+The configuration boundary is typed rather than checked. `AdapterName`,
+`TunnelAddress`, `PacketSize` and `DnsServers` each have a private constructor
+and one `TryParse`, so holding one is evidence that the text passed. They
+compose into `ValidatedConfiguration`, which is what `IControlChannel` accepts:
+there is no overload that takes the raw strings, so no caller can send
+something unchecked and no implementation has to re-check.
+
+Each refined type also owns the sentence shown when its parse fails, so the
+rule and its explanation cannot drift apart. The view model no longer has
+validators of its own; it asks the parser.
+
+The same discipline runs through the rest of the model. Service state, channel
+state, collection state, configuration outcome and parse result are closed
+sums eliminated by a `Match` that takes one delegate per case, so adding a case
+breaks every site that has to handle it. `ConfigurationOutcome.Rejected` is
+keyed by `ConfigField` rather than by a wire string, which puts the translation
+from wire names at the channel edge instead of leaving every consumer to cope
+with a field name that names no field.
 
 ## Still open
 

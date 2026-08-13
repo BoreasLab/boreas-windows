@@ -44,10 +44,10 @@ public sealed class UnimplementedControlChannel : IControlChannel
         Task.FromResult(State);
 
     public Task<ConfigurationOutcome> ApplyConfigurationAsync(
-        ConfigurationDraft draft,
+        ValidatedConfiguration configuration,
         CancellationToken cancellationToken = default) =>
         Task.FromResult<ConfigurationOutcome>(
-            new ConfigurationOutcome.Rejected(NotBuilt, new Dictionary<string, string>()));
+            new ConfigurationOutcome.Rejected(NotBuilt, new Dictionary<ConfigField, string>()));
 
     public Task<ConfigurationDraft> ReadConfigurationAsync(CancellationToken cancellationToken = default) =>
         Task.FromResult(new ConfigurationDraft(

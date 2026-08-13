@@ -38,9 +38,8 @@ public sealed class ConfigurationLaws
 
         await model.Apply.ExecuteAsync(CancellationToken.None);
 
-        // Normalisation happens on the way out, so the service always receives
-        // one canonical shape regardless of how it was typed.
-        Assert.Equal("1420", channel.LastApplied!.Mtu);
+        // The service receives a parsed number, not a spelling of one.
+        Assert.Equal(1420, channel.LastApplied!.PacketSize.Value);
     }
 
     /// <summary>
@@ -64,30 +63,49 @@ public sealed class ConfigurationLaws
 
         await model.Apply.ExecuteAsync(CancellationToken.None);
 
-        Assert.Equal("10.7.0.1 10.7.0.2", channel.LastApplied!.DnsServers);
+        Assert.Equal(DnsServers.TryParse("10.7.0.1 10.7.0.2"), channel.LastApplied!.Dns);
     }
 
-    /// <summary>Normalisation is idempotent: the canonical form is a fixed point.</summary>
+    /// <summary>
+    /// Parsing is idempotent through the canonical rendering: parse, render,
+    /// parse again, and you land on the same value. This is the law that lets
+    /// the form round-trip a configuration through the service and back
+    /// without drifting, and it is stated once over the parser rather than
+    /// re-tested per field through the view model.
+    /// </summary>
     [Theory]
-    [InlineData("1,420", "1420")]
-    [InlineData("10.7.0.1, 10.7.0.2", "10.7.0.1 10.7.0.2")]
-    public async Task Normalising_an_already_normal_value_changes_nothing(string typed, string canonical)
+    [InlineData("Boreas", "10.7.0.2/24", "1,420", "10.7.0.1, 10.7.0.2")]
+    [InlineData("  Boreas  ", "  fd00::2/64  ", " 9000 ", "")]
+    [InlineData("Tunnel", "10.0.0.1/8", "1280", "1.1.1.1;8.8.8.8")]
+    public void Parsing_is_idempotent_through_the_canonical_rendering(
+        string adapter, string address, string mtu, string dns)
     {
-        var channel = new RecordingChannel(new ConfigurationOutcome.Applied());
-        var model = await LoadedAsync(channel);
+        var draft = new ConfigurationDraft(adapter, address, mtu, dns, RouteMode.Default, EgressPolicy.Direct);
 
-        model.Mtu = typed.Contains('.') ? "1420" : typed;
-        model.DnsServers = typed.Contains('.') ? typed : "";
-        await model.Apply.ExecuteAsync(CancellationToken.None);
-        var once = typed.Contains('.') ? channel.LastApplied!.DnsServers : channel.LastApplied!.Mtu;
+        var once = Assert.IsType<ConfigurationParse.Valid>(ConfigurationParser.Parse(draft)).Configuration;
+        var twice = Assert.IsType<ConfigurationParse.Valid>(
+            ConfigurationParser.Parse(once.ToDraft())).Configuration;
 
-        model.Mtu = typed.Contains('.') ? "1420" : once;
-        model.DnsServers = typed.Contains('.') ? once : "";
-        await model.Apply.ExecuteAsync(CancellationToken.None);
-        var twice = typed.Contains('.') ? channel.LastApplied!.DnsServers : channel.LastApplied!.Mtu;
-
-        Assert.Equal(canonical, once);
         Assert.Equal(once, twice);
+    }
+
+    /// <summary>
+    /// A refined value cannot be built from text that fails its rule, so the
+    /// only way to hold one is to have passed the check.
+    /// </summary>
+    [Fact]
+    public void A_refined_value_rejects_text_that_fails_its_rule()
+    {
+        Assert.Null(AdapterName.TryParse("   "));
+        Assert.Null(TunnelAddress.TryParse("10.7.0.2"));
+        Assert.Null(PacketSize.TryParse("1279"));
+        Assert.Null(PacketSize.TryParse("9001"));
+        Assert.Null(DnsServers.TryParse("not-an-address"));
+
+        Assert.NotNull(AdapterName.TryParse(" Boreas "));
+        Assert.NotNull(TunnelAddress.TryParse("fd00::2/64"));
+        Assert.NotNull(PacketSize.TryParse("1,420"));
+        Assert.Equal(DnsServers.Empty, DnsServers.TryParse("   "));
     }
 
     /// <summary>
@@ -182,7 +200,10 @@ public sealed class ConfigurationLaws
     {
         var rejection = new ConfigurationOutcome.Rejected(
             new TypedError("cfg.rejected", "The adapter name is in use.", "Choose another name."),
-            new Dictionary<string, string> { ["adapter"] = "Another adapter already uses this name." });
+            new Dictionary<ConfigField, string>
+            {
+                [ConfigField.Adapter] = "Another adapter already uses this name.",
+            });
 
         var model = await LoadedAsync(new RecordingChannel(rejection));
 
@@ -197,16 +218,15 @@ public sealed class ConfigurationLaws
     }
 
     /// <summary>
-    /// A field name the client does not know is ignored rather than guessed
-    /// at. Attaching an unknown message to an arbitrary field would point the
-    /// user at the wrong input.
+    /// A rejection that names no field leaves every field message clear. The
+    /// banner still reports it; nothing is pinned to an arbitrary input.
     /// </summary>
     [Fact]
-    public async Task An_unknown_field_name_from_the_service_is_ignored()
+    public async Task A_rejection_naming_no_field_leaves_the_fields_alone()
     {
         var rejection = new ConfigurationOutcome.Rejected(
             new TypedError("cfg.rejected", "Rejected.", "Fix it."),
-            new Dictionary<string, string> { ["something_the_client_does_not_have"] = "..." });
+            new Dictionary<ConfigField, string>());
 
         var model = await LoadedAsync(new RecordingChannel(rejection));
         await model.Apply.ExecuteAsync(CancellationToken.None);
@@ -216,6 +236,7 @@ public sealed class ConfigurationLaws
         Assert.Null(model.MtuError);
         Assert.Null(model.DnsError);
         Assert.Null(model.FirstErrorField);
+        Assert.NotNull(model.OutcomeMessage);
     }
 
     /// <summary>

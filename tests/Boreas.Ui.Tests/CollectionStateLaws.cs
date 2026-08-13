@@ -166,6 +166,19 @@ public sealed class CollectionStateLaws
     }
 
     /// <summary>
+    /// Event identity is time-ordered, so sorting by id agrees with sorting by
+    /// time. A version 4 identifier would order arbitrarily.
+    /// </summary>
+    [Fact]
+    public void Event_identity_is_a_version_7_uuid()
+    {
+        var id = new ControlEvent(DateTimeOffset.UnixEpoch, ControlEventKind.Channel, "x").Id;
+
+        // RFC 9562 puts the version in the high nibble of the 7th byte.
+        Assert.Equal(7, (id.ToByteArray(bigEndian: true)[6] & 0xF0) >> 4);
+    }
+
+    /// <summary>
     /// Drives the model past its initial loading state without a UI thread.
     /// </summary>
     private static void Settle(DiagnosticsViewModel model) =>

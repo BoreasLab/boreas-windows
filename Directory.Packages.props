@@ -15,18 +15,30 @@
     set: the license, maintenance, release cadence and transitive graph of the
     Windows App SDK and of the Wintun redistributable are still open, and no
     release candidate may ship against them until that review lands.
+
+    The Windows App SDK moved to a component metapackage in 2.x. 2.4.0 is the
+    generation contemporary with .NET 10; the 1.7 line predates it. Neither
+    line can be compiled from this machine, so this pin is reasoned rather
+    than verified, and the Windows CI job is what settles it. If that job
+    fails on the SDK rather than on the code, this is the line to reconsider.
   -->
   <ItemGroup>
-    <PackageVersion Include="Microsoft.WindowsAppSDK" Version="1.7.260224002" />
-    <PackageVersion Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.6584" />
+    <PackageVersion Include="Microsoft.WindowsAppSDK" Version="2.4.0" />
+    <PackageVersion Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.8249" />
   </ItemGroup>
 
-  <!-- The test stack never ships, so it carries none of the redistribution
-       obligations under review above. -->
+  <!--
+    The test stack never ships, so it carries none of the redistribution
+    obligations under review above.
+
+    One package. xunit v3 runs on Microsoft.Testing.Platform and builds the
+    test project as its own executable, so it needs neither the VSTest host
+    (Microsoft.NET.Test.Sdk) nor a separate adapter
+    (xunit.runner.visualstudio). Three packages became one, and `dotnet test`
+    still drives it.
+  -->
   <ItemGroup>
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
-    <PackageVersion Include="xunit" Version="2.9.3" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageVersion Include="xunit.v3" Version="3.2.2" />
   </ItemGroup>
 
 </Project>

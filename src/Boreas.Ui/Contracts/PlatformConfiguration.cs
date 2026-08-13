@@ -1,14 +1,15 @@
 namespace Boreas.Ui.Contracts;
 
 /// <summary>
-/// The subset of <c>PlatformConfig</c> and <c>EngineConfig</c> a user may edit.
+/// The editable configuration as text: what a person typed, or what the
+/// service reported.
 /// </summary>
 /// <remarks>
-/// The client parses input, but it does not decide anything: this record is a
-/// proposal that the service validates at the trust boundary and turns into an
-/// immutable trusted value before it starts. Client-side validation exists to
-/// give the user the error next to the field they typed it in, one round trip
-/// earlier. It is never the authority.
+/// Deliberately all strings. This is the untrusted side of the boundary;
+/// <see cref="ConfigurationParser.Parse"/> turns it into a
+/// <see cref="ValidatedConfiguration"/>, and only that can be sent. The client
+/// parsing early is a courtesy that puts the message next to the field one
+/// round trip sooner. The service remains the authority.
 ///
 /// Service account, packaging, pipe authorization policy and the Wintun binary
 /// are installation policy and are deliberately not editable here.
@@ -60,12 +61,18 @@ public abstract record ConfigurationOutcome
 
     /// <summary>
     /// Rejected at the trust boundary. <paramref name="FieldErrors"/> maps a
-    /// field name to its message so the client can place each one beside its
-    /// cause instead of showing one banner for the whole form.
+    /// field to its message so the client can place each one beside its cause
+    /// instead of showing one banner for the whole form.
     /// </summary>
+    /// <remarks>
+    /// Keyed by <see cref="ConfigField"/> rather than by a wire string. The
+    /// channel implementation translates the wire name once, when it decodes
+    /// the response, so nothing above it has to cope with a field name that
+    /// names no field.
+    /// </remarks>
     public sealed record Rejected(
         TypedError Error,
-        IReadOnlyDictionary<string, string> FieldErrors) : ConfigurationOutcome;
+        IReadOnlyDictionary<ConfigField, string> FieldErrors) : ConfigurationOutcome;
 
     public TResult Match<TResult>(
         Func<Applied, TResult> applied,

@@ -10,6 +10,14 @@ public sealed class StatusViewModel : ObservableObject, IDisposable
 {
     private readonly IControlChannel _channel;
 
+    // Derived values, cached for the lifetime of one channel state. Plain
+    // nullable fields rather than the `field` keyword: `field` is for a
+    // property that validates on assignment, and these have no setter to
+    // hang that on. Reaching for it here would be syntax for its own sake.
+    private StatusPresentation? _presentation;
+    private ChannelPresentation? _channelPresentation;
+    private SessionFacts? _facts;
+
     public StatusViewModel(IControlChannel channel)
     {
         _channel = channel;
@@ -25,14 +33,21 @@ public sealed class StatusViewModel : ObservableObject, IDisposable
     public AsyncCommand Refresh { get; }
 
     /// <summary>
-    /// Derived on read rather than stored and synchronised. Two fields that
-    /// must always agree are one field and a function; keeping a cached copy
-    /// here would render one stale frame on every transition.
+    /// Derived from the channel, never stored as independent state, and
+    /// memoized only for the lifetime of one channel state.
     /// </summary>
+    /// <remarks>
+    /// The cache is cleared by the same handler that raises the change
+    /// notifications, so it cannot serve a stale value: there is no path that
+    /// updates the channel without invalidating this. What it buys is that a
+    /// screen with six bindings onto this property derives it once per change
+    /// rather than six times per render.
+    /// </remarks>
     public StatusPresentation Presentation =>
-        StatusPresentation.For(_channel.Channel, _channel.State);
+        _presentation ??= StatusPresentation.For(_channel.Channel, _channel.State);
 
-    public ChannelPresentation Channel => ChannelPresentation.For(_channel.Channel);
+    public ChannelPresentation Channel =>
+        _channelPresentation ??= ChannelPresentation.For(_channel.Channel);
 
     /// <summary>
     /// The label for the one prominent action, always a verb naming what will
@@ -61,8 +76,10 @@ public sealed class StatusViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Session facts. Never null: <see cref="SessionFacts.None"/> stands in
     /// while there is no session, so no binding has to survive a null path.
+    /// Building it allocates ten records, and four bindings read it, so it is
+    /// built once per change.
     /// </summary>
-    public SessionFacts Facts => _channel.Channel is ControlChannelState.Connected
+    public SessionFacts Facts => _facts ??= _channel.Channel is ControlChannelState.Connected
         ? _channel.State.Match(
             stopped: static _ => SessionFacts.None,
             starting: static _ => SessionFacts.None,
@@ -71,7 +88,12 @@ public sealed class StatusViewModel : ObservableObject, IDisposable
             failed: static _ => SessionFacts.None)
         : SessionFacts.None;
 
-    public bool HasFacts => Facts.SessionId.Length > 0;
+    /// <summary>
+    /// Asked of the state directly rather than by probing the facts for an
+    /// empty string. The state is what decides; the string was a proxy for it.
+    /// </summary>
+    public bool HasFacts =>
+        _channel.Channel is ControlChannelState.Connected && _channel.State is ServiceState.Running;
 
     /// <summary>
     /// The bypass warning, or null when there is nothing to warn about. It is
@@ -110,6 +132,12 @@ public sealed class StatusViewModel : ObservableObject, IDisposable
 
     private void OnChannelChanged(object? sender, EventArgs e)
     {
+        // Invalidated before notifying, so the first binding to read after the
+        // notification recomputes rather than seeing the previous value.
+        _presentation = null;
+        _channelPresentation = null;
+        _facts = null;
+
         Raise(nameof(Presentation));
         Raise(nameof(Channel));
         Raise(nameof(PrimaryLabel));

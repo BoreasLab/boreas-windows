@@ -1,12 +1,15 @@
 {
   "$comment": [
     "W0 owns the exact SDK pin. This records the band CI and local builds agree",
-    "on so a runner image bump cannot silently change the compiler.",
-    "rollForward latestFeature accepts newer 8.0.x patch and feature bands and",
-    "refuses 9.0 and above."
+    "on, so a runner image bump cannot silently change the compiler.",
+    ".NET 10 is the active LTS channel, supported to 2028-11-14. .NET 8 left",
+    "active support and reaches end of life on 2026-11-10, so it is not a",
+    "defensible target for new work.",
+    "rollForward latestFeature accepts newer 10.0.x patch and feature bands and",
+    "refuses 11.0 and above."
   ],
   "sdk": {
-    "version": "8.0.100",
+    "version": "10.0.100",
     "rollForward": "latestFeature",
     "allowPrerelease": false
   }

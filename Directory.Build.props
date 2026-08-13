@@ -3,10 +3,15 @@
   <PropertyGroup>
     <!-- W0 pins the .NET SDK, Windows App SDK and target platform versions.
          The values below are working defaults, not the pinned inputs, and have
-         not been resolved against a Windows machine from this repository. -->
+         not been resolved against a Windows machine from this repository.
+
+         There is deliberately no LangVersion here. The language version
+         follows the target framework, which is what keeps the compiler and
+         the runtime in step; pinning it to "latest" would resolve differently
+         on different machines. net10.0 selects C# 14.
+         https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/configure-language-version -->
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <LangVersion>latest</LangVersion>
     <InvariantGlobalization>false</InvariantGlobalization>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
   </PropertyGroup>

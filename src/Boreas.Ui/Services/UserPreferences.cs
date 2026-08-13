@@ -3,6 +3,22 @@ using System.Text.Json.Serialization;
 
 namespace Boreas.Ui.Services;
 
+/// <summary>
+/// The serializer contract for <see cref="Preferences"/>, generated at compile
+/// time rather than discovered by reflection.
+/// </summary>
+/// <remarks>
+/// Source generation is what makes this file safe to trim and to compile
+/// ahead of time: the reflection-based overloads of
+/// <see cref="JsonSerializer"/> have no way to tell the trimmer which members
+/// survive, so they either keep everything or silently lose properties in a
+/// trimmed build. It also moves the enum-to-string decision into the
+/// generated context instead of allocating a converter per call.
+/// </remarks>
+[JsonSourceGenerationOptions(WriteIndented = true, UseStringEnumConverter = true)]
+[JsonSerializable(typeof(Preferences))]
+internal sealed partial class PreferenceJsonContext : JsonSerializerContext;
+
 /// <summary>Which theme the user chose, or that they did not choose.</summary>
 public enum ThemePreference
 {
@@ -30,12 +46,6 @@ public sealed record Preferences(
 /// </remarks>
 public sealed class PreferenceStore
 {
-    private static readonly JsonSerializerOptions Options = new()
-    {
-        WriteIndented = true,
-        Converters = { new JsonStringEnumConverter() },
-    };
-
     private readonly string _path;
 
     public PreferenceStore()
@@ -52,7 +62,8 @@ public sealed class PreferenceStore
         try
         {
             return File.Exists(_path)
-                ? JsonSerializer.Deserialize<Preferences>(File.ReadAllText(_path), Options) ?? new Preferences()
+                ? JsonSerializer.Deserialize(File.ReadAllText(_path), PreferenceJsonContext.Default.Preferences)
+                  ?? new Preferences()
                 : new Preferences();
         }
         catch (Exception e) when (e is IOException or JsonException or UnauthorizedAccessException)
@@ -65,7 +76,7 @@ public sealed class PreferenceStore
     {
         try
         {
-            File.WriteAllText(_path, JsonSerializer.Serialize(preferences, Options));
+            File.WriteAllText(_path, JsonSerializer.Serialize(preferences, PreferenceJsonContext.Default.Preferences));
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {

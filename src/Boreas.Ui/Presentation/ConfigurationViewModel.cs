@@ -1,5 +1,3 @@
-using System.Globalization;
-using System.Net;
 using Boreas.Ui.Contracts;
 using Boreas.Ui.Services;
 
@@ -25,21 +23,9 @@ namespace Boreas.Ui.Presentation;
 /// </remarks>
 public sealed class ConfigurationViewModel : ObservableObject
 {
-    private static readonly ConfigField[] AllFields =
-        [ConfigField.Adapter, ConfigField.Address, ConfigField.Mtu, ConfigField.Dns];
-
     private readonly IControlChannel _channel;
     private readonly Dictionary<ConfigField, string> _errors = [];
     private readonly HashSet<ConfigField> _touched = [];
-
-    private string _adapterName = string.Empty;
-    private string _interfaceAddress = string.Empty;
-    private string _mtu = string.Empty;
-    private string _dnsServers = string.Empty;
-    private RouteMode _routes = RouteMode.Default;
-    private EgressPolicy _egress = EgressPolicy.Direct;
-    private ConfigurationOutcome? _outcome;
-    private bool _isLoaded;
 
     public ConfigurationViewModel(IControlChannel channel)
     {
@@ -54,51 +40,51 @@ public sealed class ConfigurationViewModel : ObservableObject
 
     public string AdapterName
     {
-        get => _adapterName;
-        set { if (Set(ref _adapterName, value)) { Revalidate(ConfigField.Adapter); } }
-    }
+        get;
+        set { if (Set(ref field, value)) { Revalidate(ConfigField.Adapter); } }
+    } = string.Empty;
 
     public string InterfaceAddress
     {
-        get => _interfaceAddress;
-        set { if (Set(ref _interfaceAddress, value)) { Revalidate(ConfigField.Address); } }
-    }
+        get;
+        set { if (Set(ref field, value)) { Revalidate(ConfigField.Address); } }
+    } = string.Empty;
 
     public string Mtu
     {
-        get => _mtu;
-        set { if (Set(ref _mtu, value)) { Revalidate(ConfigField.Mtu); } }
-    }
+        get;
+        set { if (Set(ref field, value)) { Revalidate(ConfigField.Mtu); } }
+    } = string.Empty;
 
     public string DnsServers
     {
-        get => _dnsServers;
-        set { if (Set(ref _dnsServers, value)) { Revalidate(ConfigField.Dns); } }
-    }
+        get;
+        set { if (Set(ref field, value)) { Revalidate(ConfigField.Dns); } }
+    } = string.Empty;
 
     public RouteMode Routes
     {
-        get => _routes;
+        get;
         set
         {
-            if (Set(ref _routes, value))
+            if (Set(ref field, value))
             {
                 Raise(nameof(RouteIndex));
             }
         }
-    }
+    } = RouteMode.Default;
 
     public EgressPolicy Egress
     {
-        get => _egress;
+        get;
         set
         {
-            if (Set(ref _egress, value))
+            if (Set(ref field, value))
             {
                 Raise(nameof(EgressIndex));
             }
         }
-    }
+    } = EgressPolicy.Direct;
 
     /// <summary>
     /// The radio group's index, mapped both ways over the closed enum so the
@@ -132,10 +118,10 @@ public sealed class ConfigurationViewModel : ObservableObject
     /// </summary>
     public ConfigurationOutcome? Outcome
     {
-        get => _outcome;
+        get;
         private set
         {
-            if (Set(ref _outcome, value))
+            if (Set(ref field, value))
             {
                 Raise(nameof(OutcomeMessage));
                 Raise(nameof(OutcomeTone));
@@ -146,8 +132,8 @@ public sealed class ConfigurationViewModel : ObservableObject
 
     public bool IsLoaded
     {
-        get => _isLoaded;
-        private set => Set(ref _isLoaded, value);
+        get;
+        private set => Set(ref field, value);
     }
 
     public string? AdapterError => _errors.GetValueOrDefault(ConfigField.Adapter);
@@ -186,21 +172,33 @@ public sealed class ConfigurationViewModel : ObservableObject
     /// <summary>
     /// The first field with an error, so focus can be moved there on submit.
     /// </summary>
-    public ConfigField? FirstErrorField => AllFields
+    /// <remarks>
+    /// The lambda parameter is deliberately not called <c>field</c>. Inside a
+    /// property accessor that identifier is now the contextual keyword for the
+    /// synthesized backing field, and shadowing it here would either fail to
+    /// compile or silently bind to the wrong thing.
+    /// </remarks>
+    public ConfigField? FirstErrorField => ConfigurationParser.AllFields
         .Cast<ConfigField?>()
-        .FirstOrDefault(field => _errors.ContainsKey(field!.Value));
+        .FirstOrDefault(candidate => _errors.ContainsKey(candidate!.Value));
 
     public async Task LoadAsync(CancellationToken cancellationToken = default)
     {
         var draft = await _channel.ReadConfigurationAsync(cancellationToken);
-        _adapterName = draft.AdapterName;
-        _interfaceAddress = draft.InterfaceAddress;
-        _mtu = draft.Mtu;
-        _dnsServers = draft.DnsServers;
-        _routes = draft.Routes;
-        _egress = draft.Egress;
+
+        // Cleared before the assignments, not after: every setter revalidates,
+        // and a field nobody has touched yet must not acquire a message just
+        // because the service supplied its value.
         _errors.Clear();
         _touched.Clear();
+
+        AdapterName = draft.AdapterName;
+        InterfaceAddress = draft.InterfaceAddress;
+        Mtu = draft.Mtu;
+        DnsServers = draft.DnsServers;
+        Routes = draft.Routes;
+        Egress = draft.Egress;
+
         Outcome = null;
         IsLoaded = true;
         RaiseAll();
@@ -237,16 +235,21 @@ public sealed class ConfigurationViewModel : ObservableObject
         }
     }
 
+    /// <summary>The form as text, ready for the parser.</summary>
+    private ConfigurationDraft CurrentDraft => new(
+        AdapterName: AdapterName,
+        InterfaceAddress: InterfaceAddress,
+        Mtu: Mtu,
+        DnsServers: DnsServers,
+        Routes: Routes,
+        Egress: Egress);
+
     private void Validate(ConfigField field)
     {
-        var message = field switch
-        {
-            ConfigField.Adapter => ValidateAdapter(_adapterName),
-            ConfigField.Address => ValidateAddress(_interfaceAddress),
-            ConfigField.Mtu => ValidateMtu(_mtu),
-            ConfigField.Dns => ValidateDns(_dnsServers),
-            _ => throw Unreachable.Value(field),
-        };
+        // One source of truth. The rule and its sentence live with the refined
+        // type, so a field can never report something the whole-form parse
+        // would disagree with.
+        var message = ConfigurationParser.Validate(field, CurrentDraft);
 
         if (message is null)
         {
@@ -260,7 +263,7 @@ public sealed class ConfigurationViewModel : ObservableObject
 
     private void ValidateAll()
     {
-        foreach (var field in AllFields)
+        foreach (var field in ConfigurationParser.AllFields)
         {
             _touched.Add(field);
             Validate(field);
@@ -271,22 +274,26 @@ public sealed class ConfigurationViewModel : ObservableObject
 
     private async Task ApplyAsync(CancellationToken cancellationToken)
     {
-        ValidateAll();
-        if (_errors.Count > 0)
+        // Parsed once. Either this yields a value the service can be handed,
+        // or it yields the messages, and there is no third case and no way to
+        // send the unparsed text by mistake.
+        var parsed = ConfigurationParser.Parse(CurrentDraft);
+
+        if (parsed is ConfigurationParse.Invalid invalid)
         {
+            foreach (var (field, message) in invalid.Errors)
+            {
+                _touched.Add(field);
+                _errors[field] = message;
+            }
+
             Outcome = null;
+            RaiseMessages();
             return;
         }
 
-        var outcome = await _channel.ApplyConfigurationAsync(
-            new ConfigurationDraft(
-                AdapterName: _adapterName.Trim(),
-                InterfaceAddress: _interfaceAddress.Trim(),
-                Mtu: NormaliseMtu(_mtu),
-                DnsServers: NormaliseDns(_dnsServers),
-                Routes: _routes,
-                Egress: _egress),
-            cancellationToken);
+        var configuration = ((ConfigurationParse.Valid)parsed).Configuration;
+        var outcome = await _channel.ApplyConfigurationAsync(configuration, cancellationToken);
 
         // The service is the authority on validity. Its field messages replace
         // whatever this side thought, and every typed value stays put.
@@ -295,15 +302,8 @@ public sealed class ConfigurationViewModel : ObservableObject
             restartRequired: _ => null,
             rejected: r =>
             {
-                foreach (var (name, message) in r.FieldErrors)
+                foreach (var (field, message) in r.FieldErrors)
                 {
-                    // Wire names the service does not share with this client
-                    // are ignored rather than guessed at.
-                    if (!Enum.TryParse<ConfigField>(name, ignoreCase: true, out var field))
-                    {
-                        continue;
-                    }
-
                     _touched.Add(field);
                     _errors[field] = message;
                 }
@@ -314,76 +314,6 @@ public sealed class ConfigurationViewModel : ObservableObject
         Outcome = outcome;
         RaiseMessages();
     }
-
-    private static string? ValidateAdapter(string value) =>
-        string.IsNullOrWhiteSpace(value)
-            ? "Give the adapter a name. It appears in Windows network settings."
-            : null;
-
-    private static string? ValidateAddress(string value)
-    {
-        var trimmed = value.Trim();
-        if (trimmed.Length == 0)
-        {
-            return "Enter the address this device takes inside the tunnel, with its prefix "
-                 + "length, for example 10.7.0.2/24.";
-        }
-
-        var parts = trimmed.Split('/', StringSplitOptions.TrimEntries);
-        if (parts.Length != 2 || !IPAddress.TryParse(parts[0], out var address))
-        {
-            return "Write the address as an IP address, a slash, and a prefix length, "
-                 + "for example 10.7.0.2/24 or fd00::2/64.";
-        }
-
-        var maximumPrefix = address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6 ? 128 : 32;
-        return int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out var prefix)
-               && prefix >= 0 && prefix <= maximumPrefix
-            ? null
-            : $"The prefix length after the slash must be a number from 0 to {maximumPrefix}.";
-    }
-
-    private static string? ValidateMtu(string value)
-    {
-        var normalised = NormaliseMtu(value);
-        if (normalised.Length == 0)
-        {
-            return "Enter the maximum packet size for the tunnel, in bytes.";
-        }
-
-        // 1280 is the smallest MTU IPv6 permits on a link; above 9000 is
-        // outside what any supported physical path carries.
-        return int.TryParse(normalised, NumberStyles.None, CultureInfo.InvariantCulture, out var mtu)
-               && mtu is >= 1280 and <= 9000
-            ? null
-            : "The packet size must be a number from 1280 to 9000 bytes.";
-    }
-
-    private static string? ValidateDns(string value)
-    {
-        var normalised = NormaliseDns(value);
-        if (normalised.Length == 0)
-        {
-            return null; // Optional: the tunnel can leave DNS as Windows has it.
-        }
-
-        var bad = normalised
-            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
-            .FirstOrDefault(entry => !IPAddress.TryParse(entry, out _));
-
-        return bad is null
-            ? null
-            : $"“{bad}” is not an IP address. Separate servers with commas or spaces.";
-    }
-
-    /// <summary>Accepts "1,420", " 1420 " and "1420".</summary>
-    private static string NormaliseMtu(string value) =>
-        new(value.Where(char.IsAsciiDigit).ToArray());
-
-    /// <summary>Accepts commas, semicolons, spaces and newlines as separators.</summary>
-    private static string NormaliseDns(string value) => string.Join(
-        ' ',
-        value.Split([',', ';', ' ', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
 
     private void RaiseAll()
     {
@@ -399,14 +329,3 @@ public sealed class ConfigurationViewModel : ObservableObject
     }
 }
 
-/// <summary>
-/// The editable fields, closed. The names double as the wire keys the service
-/// uses in <see cref="ConfigurationOutcome.Rejected.FieldErrors"/>.
-/// </summary>
-public enum ConfigField
-{
-    Adapter,
-    Address,
-    Mtu,
-    Dns,
-}

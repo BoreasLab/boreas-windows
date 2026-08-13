@@ -71,7 +71,7 @@ public sealed class SampleControlChannel : IControlChannel, IDisposable
     }
 
     public Task<ConfigurationOutcome> ApplyConfigurationAsync(
-        ConfigurationDraft draft,
+        ValidatedConfiguration configuration,
         CancellationToken cancellationToken = default)
     {
         Record(ControlEventKind.Command, "Configuration applied (sample).");

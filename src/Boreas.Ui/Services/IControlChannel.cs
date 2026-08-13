@@ -39,8 +39,14 @@ public interface IControlChannel
 
     Task<ServiceState> StopAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Sends a configuration that has already crossed the parse boundary.
+    /// Taking <see cref="ValidatedConfiguration"/> rather than raw text means
+    /// no caller can send something unchecked, and no implementation has to
+    /// re-check.
+    /// </summary>
     Task<ConfigurationOutcome> ApplyConfigurationAsync(
-        ConfigurationDraft draft,
+        ValidatedConfiguration configuration,
         CancellationToken cancellationToken = default);
 
     Task<ConfigurationDraft> ReadConfigurationAsync(CancellationToken cancellationToken = default);

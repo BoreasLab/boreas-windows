@@ -16,7 +16,6 @@ public sealed class AsyncCommand : ObservableObject, ICommand
 {
     private readonly Func<CancellationToken, Task> _execute;
     private readonly Func<bool> _canExecute;
-    private bool _isRunning;
 
     public AsyncCommand(Func<CancellationToken, Task> execute, Func<bool>? canExecute = null)
     {
@@ -28,10 +27,10 @@ public sealed class AsyncCommand : ObservableObject, ICommand
 
     public bool IsRunning
     {
-        get => _isRunning;
+        get;
         private set
         {
-            if (Set(ref _isRunning, value))
+            if (Set(ref field, value))
             {
                 RaiseCanExecuteChanged();
             }

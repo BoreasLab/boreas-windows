@@ -16,8 +16,15 @@ public sealed record ControlEvent(
     string Summary,
     TypedError? Error = null)
 {
-    /// <summary>Stable identity for list virtualisation and keyed updates.</summary>
-    public Guid Id { get; } = Guid.NewGuid();
+    /// <summary>
+    /// Stable identity for list virtualisation and keyed updates.
+    /// </summary>
+    /// <remarks>
+    /// Version 7 rather than version 4: an RFC 9562 v7 identifier embeds its
+    /// creation timestamp, so identity sorts the same way the list does and a
+    /// row cannot be keyed inconsistently with its own position.
+    /// </remarks>
+    public Guid Id { get; } = Guid.CreateVersion7();
 }
 
 public enum ControlEventKind
