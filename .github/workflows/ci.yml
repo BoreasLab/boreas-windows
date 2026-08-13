@@ -100,18 +100,20 @@ jobs:
         # Named cells rather than a product: the Debug cell exists only to
         # prove the sample channel still compiles, and there is no reason to
         # build it twice.
+        # No rid column. The project derives the runtime identifier from the
+        # platform, so naming it here would be a second copy of the same fact
+        # and the two could disagree; passing --runtime would in fact win over
+        # the project and reintroduce exactly the mismatch that derivation
+        # removes.
         include:
           - configuration: Release
             platform: x64
-            rid: win-x64
             publish: true
           - configuration: Release
             platform: ARM64
-            rid: win-arm64
             publish: true
           - configuration: Debug
             platform: x64
-            rid: win-x64
             publish: false
     steps:
       - uses: actions/checkout@v7
@@ -151,12 +153,10 @@ jobs:
         env:
           CONFIGURATION: ${{ matrix.configuration }}
           PLATFORM: ${{ matrix.platform }}
-          RID: ${{ matrix.rid }}
         run: >-
           dotnet publish src/Boreas.Ui/Boreas.Ui.csproj
           --configuration "$CONFIGURATION"
           -p:Platform="$PLATFORM"
-          --runtime "$RID"
           --output "artifacts/app/$PLATFORM"
 
       # Unsigned, unpinned, and built from a dependency set W0 has not yet

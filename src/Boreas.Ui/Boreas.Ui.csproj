@@ -8,13 +8,35 @@
     <AssemblyName>Boreas</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Platforms>x64;ARM64</Platforms>
-    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
     <UseWinUI>true</UseWinUI>
     <!-- Unpackaged. The product installer places the app beside the native
          service; there is no separate MSIX identity to maintain. -->
     <WindowsPackageType>None</WindowsPackageType>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <SelfContained>true</SelfContained>
+  </PropertyGroup>
+
+  <!--
+    One knob. The platform and the runtime identifier are the same fact stated
+    twice, and stated twice they can disagree: a self-contained build with no
+    explicit RID infers the *agent's* RID, so building ARM64 on an x64 agent
+    inferred win-x64 against PlatformTarget arm64 and the SDK rejected the pair
+    (NETSDK1032). Deriving the RID from the platform makes that pair
+    unrepresentable rather than merely unlikely, and callers pass -p:Platform
+    alone.
+
+    Routed through a second property rather than by reassigning Platform.
+    Platform arrives from the command line as an MSBuild global property, and a
+    global property cannot be overridden from inside the project, so a
+    condition on Platform itself silently does nothing for exactly the values
+    it was written to catch. The AnyCPU defaults are not among this project's
+    platforms and would name a RID that does not exist, so a bare `dotnet
+    build` or a solution mapping lands on x64.
+  -->
+  <PropertyGroup>
+    <BoreasPlatform Condition="'$(Platform)' == '' or '$(Platform)' == 'AnyCPU' or '$(Platform)' == 'Any CPU'">x64</BoreasPlatform>
+    <BoreasPlatform Condition="'$(BoreasPlatform)' == ''">$(Platform)</BoreasPlatform>
+    <RuntimeIdentifier>win-$(BoreasPlatform.ToLowerInvariant())</RuntimeIdentifier>
   </PropertyGroup>
 
   <ItemGroup>
