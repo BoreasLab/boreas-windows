@@ -1,223 +1,246 @@
 #!/usr/bin/env bash
 #
-# Set up the boreas-windows development environment.
+# Provision the Boreas Windows development toolchain in userspace, installing
+# nothing globally and using no sudo.
 #
-# Installs the .NET SDK this repository pins into one directory, contains
-# every side effect inside it, and writes an env.sh to source. Re-running is
-# safe and cheap.
+# Run it, then build. Re-running is safe: every step checks its own postcondition
+# and skips work that is already done.
 #
-#   ./.agents/skills/setup-boreas-windows/scripts/setup.sh
-#   source "${TMPDIR:-/tmp}/boreas-windows-dev/env.sh"
+#   bash .agents/skills/setup-boreas-windows/scripts/setup.sh
+#   bash .agents/skills/setup-boreas-windows/scripts/setup.sh --reinstall
 #
-# There is no architecture list and no operating-system list anywhere in this
-# script, deliberately. dotnet-install.sh detects both, and a second detector
-# here would be a competing answer to a question upstream already answers, on
-# a narrower table: upstream also knows musl, FreeBSD, s390x, ppc64le and
-# riscv64. Whatever it supports, this supports, and no platform is privileged
-# because none is named.
+# Assumes bash 3.2 or later and POSIX coreutils, plus: git, curl, tar, gpg.
 #
-# Assumes bash 3.2 or later (the macOS system bash) and POSIX coreutils. No
-# GNU-only flags, no bash 4 constructs.
+#
+# THE ARCHITECTURE FACT: THERE ISN'T ONE
+#
+# The android toolchain has exactly one host-dependent fact, and names it once.
+# This one has none, and that is worth stating so nobody adds it back.
+#
+# No architecture and no operating system is named anywhere below.
+# dotnet-install.sh detects both: its --architecture defaults to <auto>, "the
+# currently running OS architecture", and --os "should only be used when it's
+# required to override the operating system that is detected by the script".
+# A case statement here would be a second answer to a settled question, on a
+# narrower table than upstream's, which also covers musl, FreeBSD, s390x,
+# ppc64le and riscv64. Whatever upstream supports, this supports, and no
+# platform is privileged because none is named.
+#
+#
+# WHERE THINGS COME FROM
+#
+# Two sources, each the only sensible one for what it provides:
+#
+#   Microsoft    The SDK, through dotnet-install.sh, which also owns platform
+#                detection and the global.json version rules.
+#
+#   This repo    Which SDK, through the global.json it already pins. Never
+#                restated here; --jsonfile hands the file over, and the SDK's
+#                own resolver reads it, rollForward included.
+#
+# So this script pins no SDK version. The only constants below are the three
+# URLs of the installer and its signature, and those are the published stable
+# ones rather than a build this script chose.
 set -euo pipefail
 
-readonly INSTALLER_URL="https://dot.net/v1/dotnet-install.sh"
-readonly SIGNATURE_URL="https://dot.net/v1/dotnet-install.sig"
-readonly PUBLIC_KEY_URL="https://dot.net/v1/dotnet-install.asc"
+# --- Pinned inputs -----------------------------------------------------------
 
-# Written into the root at install time. --uninstall refuses to remove a
-# directory without it, so a mistyped --root cannot turn into rm -rf on
-# something this script never created.
-readonly MARKER=".boreas-windows-dev"
+readonly INSTALLER_URL=https://dot.net/v1/dotnet-install.sh
+readonly SIGNATURE_URL=https://dot.net/v1/dotnet-install.sig
+readonly PUBLIC_KEY_URL=https://dot.net/v1/dotnet-install.asc
 
-warn() { printf '%s\n' "$*" >&2; }
-die() { warn "error: $*"; exit 1; }
+# --- Boundary ----------------------------------------------------------------
+
+log() { printf '%s\n' "$*" >&2; }
+die() { printf 'error: %s\n' "$*" >&2; exit 1; }
 
 usage() {
   cat <<'USAGE'
-usage: setup.sh [options]
+usage: setup.sh [--reinstall] [--help]
 
-  --root DIR     where the toolchain lives (default: ${TMPDIR:-/tmp}/boreas-windows-dev)
-  --check        also build and run the core law suite
-  --uninstall    remove the toolchain root and exit
-  --no-verify    skip the installer signature check (not recommended)
-  --help         this text
+  (no flags)   Provision or repair the toolchain. Safe to re-run.
+  --reinstall  Delete the toolchain root first, then provision from scratch.
 
-Sourcing DIR/env.sh puts the toolchain on PATH for the current shell.
+Everything is installed under $BOREAS_DEV_ROOT, default /tmp/boreas-windows-dev.
+Nothing is installed globally and no command uses sudo.
 USAGE
 }
 
-# The repository is found from this script's own location rather than from the
-# working directory, so the command above works when pasted from anywhere.
-resolve_repository() {
-  local script_dir
-  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  git -C "$script_dir" rev-parse --show-toplevel 2>/dev/null \
-    || die "not inside a git repository: $script_dir"
+# --- Layout ------------------------------------------------------------------
+#
+# One name per path, derived once, so no step invents its own spelling.
+
+ROOT="${BOREAS_DEV_ROOT:-/tmp/boreas-windows-dev}"
+readonly ROOT
+readonly DOWNLOADS="$ROOT/downloads"
+readonly DOTNET_DIR="$ROOT/dotnet"
+readonly DOTNET_BIN="$DOTNET_DIR/dotnet"
+readonly NUGET_DIR="$ROOT/nuget"
+readonly CLI_HOME="$ROOT/cli-home"
+readonly GNUPG_DIR="$ROOT/gnupg"
+readonly INSTALLER="$DOWNLOADS/dotnet-install.sh"
+readonly ACTIVATE="$ROOT/activate.sh"
+
+# The repository this script belongs to.
+#
+# Asked of git, from the script's own directory, rather than counted in `..`
+# segments. A relative climb encodes where the file happens to sit today, so
+# moving it changes which directory it calls the root, and it does so silently:
+# the wrong answer is still a valid path.
+#
+# `readlink -f` would also resolve a symlinked script, and the android setup
+# uses it, but it is GNU-only on the macOS this script claims to support. The
+# directory is resolved with cd/pwd instead, which costs symlink resolution of
+# the script file itself and buys portability.
+repo_root() {
+  local here
+  command -v git >/dev/null ||
+    { printf 'git is required to locate the repository\n' >&2; return 1; }
+  here="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+  git -C "$here" rev-parse --show-toplevel 2>/dev/null ||
+    { printf 'not inside a git repository: %s\n' "$here" >&2; return 1; }
 }
 
-# Fetch the installer and prove it is the one Microsoft signed. GNUPGHOME is
-# inside the root, so importing the key does not touch the user's keyring.
-fetch_installer() {
-  local work="$1" verify="$2"
+REPO="$(repo_root)"
+readonly REPO
+readonly GLOBAL_JSON="$REPO/global.json"
+readonly TEST_PROJECT="$REPO/tests/Boreas.Ui.Tests/Boreas.Ui.Tests.csproj"
 
-  curl -fsSL -o "$work/dotnet-install.sh" "$INSTALLER_URL"
+# --- Shared effects ----------------------------------------------------------
 
-  if [ "$verify" != "true" ]; then
-    warn "warning: installer signature not checked (--no-verify)"
-    return 0
-  fi
-
-  command -v gpg >/dev/null 2>&1 \
-    || die "gpg not found. Install it, or re-run with --no-verify to accept an unverified installer."
-
-  curl -fsSL -o "$work/dotnet-install.sig" "$SIGNATURE_URL"
-  curl -fsSL -o "$work/dotnet-install.asc" "$PUBLIC_KEY_URL"
-
-  GNUPGHOME="$work/gnupg"
-  export GNUPGHOME
-  mkdir -p "$GNUPGHOME"
-  chmod 700 "$GNUPGHOME"
-
-  gpg --quiet --import "$work/dotnet-install.asc"
-  gpg --verify "$work/dotnet-install.sig" "$work/dotnet-install.sh" 2>/dev/null \
-    || die "installer signature did not verify. Do not run it."
+# Fetch to a temporary name and rename on success, so an interrupted download
+# never leaves a short file that a later run would trust.
+fetch() {
+  local url="$1" target="$2"
+  [ -f "$target" ] && return 0
+  curl --disable --fail --silent --show-error --location \
+    --retry 3 --retry-delay 2 --retry-connrefused \
+    --output "$target.partial" "$url"
+  mv -- "$target.partial" "$target"
 }
 
-# The SDK's own resolver decides whether what is installed satisfies
-# global.json: it reads the file and fails when nothing matches. Asking it
-# beats parsing the pin here and re-implementing rollForward.
+# --- Steps -------------------------------------------------------------------
+
+ensure_prerequisites() {
+  local tool
+  for tool in git curl tar gpg; do
+    command -v "$tool" >/dev/null || die "missing required command: $tool"
+  done
+  mkdir -p "$DOWNLOADS" "$NUGET_DIR" "$CLI_HOME"
+}
+
+# The installer is a shell script this script then runs, so it is checked
+# against Microsoft's signature before it is trusted. GNUPGHOME points inside
+# the root, so importing the key neither reads nor writes the user's keyring.
+ensure_installer() {
+  # Downloads are cached, but the signature is checked on every run rather than
+  # once at download time. Verifying only what was just fetched would leave a
+  # cached installer trusted forever on the strength of a check that happened
+  # in some earlier run, which is the same as not checking it.
+  fetch "$INSTALLER_URL" "$INSTALLER"
+  fetch "$SIGNATURE_URL" "$DOWNLOADS/dotnet-install.sig"
+  fetch "$PUBLIC_KEY_URL" "$DOWNLOADS/dotnet-install.asc"
+
+  mkdir -p "$GNUPG_DIR"
+  chmod 700 "$GNUPG_DIR"
+  GNUPGHOME="$GNUPG_DIR" gpg --quiet --import "$DOWNLOADS/dotnet-install.asc"
+  GNUPGHOME="$GNUPG_DIR" gpg --verify \
+    "$DOWNLOADS/dotnet-install.sig" "$INSTALLER" 2>/dev/null ||
+    die "dotnet-install.sh does not match its signature; refusing to run it.
+  If the cached copy is merely stale, --reinstall re-fetches both."
+}
+
+# The postcondition, and the only definition of "already installed" worth
+# having: the SDK's own resolver reads global.json, applies rollForward, and
+# fails when nothing installed satisfies it. Parsing the pin here would be a
+# second implementation of that rule.
 satisfies_pin() {
-  local dotnet="$1" repo="$2"
-  [ -x "$dotnet" ] || return 1
-  (cd "$repo" && "$dotnet" --version) >/dev/null 2>&1
+  [ -x "$DOTNET_BIN" ] || return 1
+  (cd -- "$REPO" && "$DOTNET_BIN" --version) >/dev/null 2>&1
 }
 
-# --jsonfile takes the version from the pin the repository already states, so
-# the installed SDK cannot drift from it. No --architecture and no --os: both
-# default to detecting the running machine.
-install_sdk() {
-  local installer="$1" repo="$2" root="$3"
-  bash "$installer" \
-    --jsonfile "$repo/global.json" \
-    --install-dir "$root/dotnet" \
-    --no-path
+ensure_dotnet() {
+  satisfies_pin && return 0
+
+  ensure_installer
+  log "installing the SDK pinned by global.json"
+  # --jsonfile takes the version from the pin the repository already states.
+  # No --architecture and no --os: both default to detecting this machine.
+  bash "$INSTALLER" \
+    --jsonfile "$GLOBAL_JSON" \
+    --install-dir "$DOTNET_DIR" \
+    --no-path >&2
 }
 
-# Written by generation rather than by hand so it cannot drift from the root
-# it describes. POSIX sh, because the shell sourcing it may be zsh, and
-# rewritten atomically so a reader never sees a half-written file.
-write_environment() {
-  local root="$1" tmp="$1/.env.sh.partial"
-
-  cat >"$tmp" <<'PROLOGUE'
-# Generated by setup.sh. Source this file; do not execute it.
-PROLOGUE
-
-  cat >>"$tmp" <<PATHS
-BOREAS_DEV_ROOT="$root"
-PATHS
-
-  cat >>"$tmp" <<'BODY'
-export DOTNET_ROOT="$BOREAS_DEV_ROOT/dotnet"
-
-# Contain the rest of the toolchain's state. Without these, packages land in
-# $HOME/.nuget and first-run sentinels in $HOME/.dotnet, and removing the root
-# would no longer remove everything this environment created.
-export NUGET_PACKAGES="$BOREAS_DEV_ROOT/nuget"
-export DOTNET_CLI_HOME="$BOREAS_DEV_ROOT/cli-home"
-
+# Generated rather than documented, so it cannot drift from the root it
+# describes. POSIX shell, because the shell sourcing it may be zsh.
+write_activation() {
+  cat >"$ACTIVATE.partial" <<ACTIVATION
+# Generated by setup.sh. Source it: source $ACTIVATE
+export DOTNET_ROOT="$DOTNET_DIR"
+export NUGET_PACKAGES="$NUGET_DIR"
+export DOTNET_CLI_HOME="$CLI_HOME"
 export DOTNET_NOLOGO=true
 export DOTNET_CLI_TELEMETRY_OPTOUT=true
 
 # A generated executable prefers DOTNET_ROOT_<ARCH> over DOTNET_ROOT, so one
 # inherited from an earlier install silently wins over the line above and the
-# runtime is looked for in the wrong place. Clearing the family is the fix
-# that needs no architecture name: whichever member was set, it is gone, and
-# DOTNET_ROOT is left as the only answer.
+# runtime is looked for in the wrong place. Clearing the family is the fix that
+# needs no architecture name: whichever member was set, it is gone.
 unset DOTNET_ROOT_X64 DOTNET_ROOT_X86 DOTNET_ROOT_ARM64 DOTNET_ROOT_ARM
-unset "DOTNET_ROOT(x86)" 2>/dev/null || true
 
-# Idempotent: sourcing twice must not stack two copies on PATH.
-case ":$PATH:" in
-  *":$DOTNET_ROOT:"*) ;;
-  *) PATH="$DOTNET_ROOT:$PATH" ;;
+# Prepended rather than replacing PATH: this toolchain is one compiler, not a
+# hermetic build environment, and the surrounding shell keeps its own tools.
+# Guarded so that sourcing twice does not stack two copies.
+case ":\$PATH:" in
+  *":$DOTNET_DIR:"*) ;;
+  *) PATH="$DOTNET_DIR:\$PATH" ;;
 esac
 export PATH
-BODY
-
-  mv "$tmp" "$root/env.sh"
+ACTIVATION
+  mv -- "$ACTIVATE.partial" "$ACTIVATE"
 }
 
-uninstall() {
-  local root="$1"
-  [ -d "$root" ] || { printf 'nothing to remove at %s\n' "$root"; return 0; }
-  [ -f "$root/$MARKER" ] \
-    || die "$root has no $MARKER file, so setup.sh did not create it. Refusing to remove it."
-  rm -rf "$root"
-  printf 'removed %s\n' "$root"
+# Assert the postconditions rather than trusting that the steps above ran.
+verify() {
+  [ -x "$DOTNET_BIN" ] || die "no dotnet at $DOTNET_BIN"
+  [ -f "$ACTIVATE" ] || die "no activation script at $ACTIVATE"
+  satisfies_pin || die "the installed SDK does not satisfy $GLOBAL_JSON"
 }
+
+# --- Entry point -------------------------------------------------------------
 
 main() {
-  local root="${TMPDIR:-/tmp}/boreas-windows-dev"
-  local check="false" verify="true" action="install"
+  local reinstall=0
 
   while [ "$#" -gt 0 ]; do
     case "$1" in
-      --root) root="${2:?--root needs a directory}"; shift 2 ;;
-      --check) check="true"; shift ;;
-      --uninstall) action="uninstall"; shift ;;
-      --no-verify) verify="false"; shift ;;
-      --help|-h) usage; return 0 ;;
-      *) usage >&2; die "unknown option: $1" ;;
+      --reinstall) reinstall=1 ;;
+      --help | -h) usage; return 0 ;;
+      *) usage >&2; die "unknown argument: $1" ;;
     esac
+    shift
   done
 
-  # Trailing slashes and relative paths both reach rm -rf and the generated
-  # env.sh, so normalise once here and treat it as trusted below.
-  mkdir -p "$root"
-  root="$(cd "$root" && pwd)"
+  [ "$reinstall" -eq 0 ] || { log "removing $ROOT"; rm -rf -- "$ROOT"; }
 
-  if [ "$action" = "uninstall" ]; then
-    uninstall "$root"
-    return 0
-  fi
+  [ -f "$GLOBAL_JSON" ] || die "not a Boreas Windows checkout: $GLOBAL_JSON is missing"
 
-  local repo
-  repo="$(resolve_repository)"
-  [ -f "$repo/global.json" ] || die "no global.json at $repo"
+  log "root $ROOT"
+  ensure_prerequisites
+  ensure_dotnet
+  write_activation
+  verify
 
-  if satisfies_pin "$root/dotnet/dotnet" "$repo"; then
-    printf 'SDK already satisfies %s/global.json\n' "$repo"
-  else
-    local work
-    work="$(mktemp -d)"
-    # shellcheck disable=SC2064  # $work is expanded now on purpose.
-    trap "rm -rf '$work'" EXIT
+  cat <<READY
 
-    fetch_installer "$work" "$verify"
-    install_sdk "$work/dotnet-install.sh" "$repo" "$root"
+Toolchain ready under $ROOT ($(cd -- "$REPO" && "$DOTNET_BIN" --version), $("$DOTNET_BIN" --info | awk -F': *' '/^ *RID:/ { print $2; exit }')).
 
-    satisfies_pin "$root/dotnet/dotnet" "$repo" \
-      || die "installed SDK does not satisfy $repo/global.json"
-  fi
+Run the core law suite:
 
-  printf '%s\n' "$MARKER" >"$root/$MARKER"
-  write_environment "$root"
-
-  # Reported by the toolchain rather than guessed here, for the same reason
-  # the platform is not detected here.
-  local rid
-  rid="$("$root/dotnet/dotnet" --info | awk -F': *' '/^ *RID:/ { print $2; exit }')"
-  printf 'ready: .NET %s (%s) in %s\n' \
-    "$(cd "$repo" && "$root/dotnet/dotnet" --version)" "$rid" "$root"
-
-  if [ "$check" = "true" ]; then
-    # shellcheck source=/dev/null
-    . "$root/env.sh"
-    dotnet test "$repo/tests/Boreas.Ui.Tests/Boreas.Ui.Tests.csproj" --configuration Release
-  fi
-
-  printf '\nnext:\n  source %s/env.sh\n' "$root"
+  source $ACTIVATE
+  dotnet test $TEST_PROJECT --configuration Release
+READY
 }
 
 main "$@"

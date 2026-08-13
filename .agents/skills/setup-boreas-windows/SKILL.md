@@ -39,38 +39,36 @@ application needs Windows and is not built by anything here; see Scope.
 
 ## Do this
 
-Two commands, from anywhere in the repository:
+Run it, then build. From anywhere in the repository:
 
 <procedure>
-./.agents/skills/setup-boreas-windows/scripts/setup.sh
-source "${TMPDIR:-/tmp}/boreas-windows-dev/env.sh"
+bash .agents/skills/setup-boreas-windows/scripts/setup.sh
+source /tmp/boreas-windows-dev/activate.sh
+dotnet test tests/Boreas.Ui.Tests/Boreas.Ui.Tests.csproj --configuration Release
 </procedure>
 
-`setup` prints the exact `source` line to run when it finishes. After sourcing,
-`dotnet` is on `PATH` and the repository builds:
+Expect `Passed!` with `Failed: 0`. `setup` prints those last two lines itself
+when it finishes, so neither has to be remembered.
 
-<verification>
-dotnet test tests/Boreas.Ui.Tests/Boreas.Ui.Tests.csproj --configuration Release
-</verification>
+## Surface
 
-Expect `Passed!` with `Failed: 0`. Pass `--check` to `setup` to have it run that
-suite itself.
+One flag, because one is enough:
 
-Re-running `setup` is safe and does not re-download: it asks the installed SDK
-whether it satisfies `global.json` and stops there when it does.
-
-## Options
-
-| Flag | Effect |
+| Invocation | Effect |
 | --- | --- |
-| `--root DIR` | Where the toolchain lives. Default `${TMPDIR:-/tmp}/boreas-windows-dev`. |
-| `--check` | Also build and run the core law suite. |
-| `--uninstall` | Remove the toolchain root and exit. |
-| `--no-verify` | Skip the installer signature check. Prints a warning. |
+| `setup.sh` | Provision or repair the toolchain. Safe to re-run. |
+| `setup.sh --reinstall` | Delete the toolchain root first, then provision from scratch. |
 
-Teardown is `setup --uninstall`, which removes the SDK, the NuGet cache, the
-CLI state and the keyring together. It refuses any directory it did not create,
-so a mistyped `--root` cannot become `rm -rf` on something else.
+The root is `$BOREAS_DEV_ROOT`, default `/tmp/boreas-windows-dev`. An
+environment variable rather than a flag, so a mistyped path cannot reach
+`rm -rf` through an argument nobody checked.
+
+Re-running is safe from any state, because each step checks its own
+postcondition rather than trusting a marker: a missing SDK is reinstalled, a
+cached installer is re-verified rather than trusted, a stale `activate.sh` is
+regenerated, and a complete toolchain is left alone. `--reinstall` exists for
+the case none of that can reach, which is a root corrupted in a way its own
+postconditions still accept.
 
 ## Scope
 
@@ -90,7 +88,8 @@ that core fails the build here, which is the intended boundary check.
 ## What it contains, and why each part
 
 Four directories under the root, each because something would otherwise land in
-`$HOME` and outlive the teardown:
+`$HOME` and outlive the teardown. A fifth, `downloads/`, caches the installer so
+a re-run fetches nothing:
 
 | Path | Redirects | Without it |
 | --- | --- | --- |
@@ -126,10 +125,16 @@ repository and reads its exit status. The SDK's own resolver reads the pin,
 including `rollForward`. Parsing the JSON here would be a second implementation
 of that rule.
 
-**Generation over instruction.** `env.sh` is written by `setup`, so it cannot
-drift from the root it describes. It is POSIX shell, because the shell sourcing
-it may be zsh, and it is written to a temporary name and renamed, so a reader
-never sees a half-written file.
+**Generation over instruction.** `activate.sh` is written by `setup`, so it
+cannot drift from the root it describes. It is POSIX shell, because the shell
+sourcing it may be zsh, and it is written to a temporary name and renamed, so a
+reader never sees a half-written file.
+
+**Consistent with setup-boreas-android.** Same shape: `--reinstall` as the only
+flag, `$BOREAS_DEV_ROOT` for the root, one `ensure_*` step per postcondition, a
+`verify` that asserts rather than trusts, and a closing block naming the exact
+commands to run next. The android script names its one host-dependent fact in
+one function; this one has none to name, which is why the header says so.
 
 ## Gotchas
 
@@ -145,11 +150,11 @@ never sees a half-written file.
   Cause: this repository runs xunit v3 on Microsoft.Testing.Platform, so the
   test project is its own native executable. A generated executable resolves the
   runtime through `DOTNET_ROOT`, never through `PATH`, so an SDK outside the
-  default location is invisible to it. Sourcing `env.sh` is what sets it.
+  default location is invisible to it. Sourcing `activate.sh` is what sets it.
 
 - **`DOTNET_ROOT_<ARCH>` outranks `DOTNET_ROOT`.** An arch-specific variable
   inherited from an earlier install silently wins, and the runtime is looked for
-  somewhere else. `env.sh` clears the whole family rather than setting the
+  somewhere else. `activate.sh` clears the whole family rather than setting the
   matching member, which is the fix that needs no architecture name.
 
 - **The installer does not resolve native dependencies.** The SDK needs ICU and
