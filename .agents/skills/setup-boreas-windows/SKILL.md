@@ -1,11 +1,11 @@
 ---
-name: bootstrap-windows-dev
+name: setup-boreas-windows
 description: >-
-  Bootstraps the boreas-windows development environment on Linux or macOS by
+  Sets up the boreas-windows development environment on Linux or macOS by
   installing a self-contained .NET SDK toolchain under a temporary directory,
   with no system-wide package, no sudo, and no writes to $HOME, then builds and
-  runs the core law suite with it. Pins the SDK from the
-  repository's own global.json, verifies the installer's GPG signature, and
+  runs the core law suite with it. Pins the SDK from the repository's own
+  global.json, verifies the installer's GPG signature, and
   redirects the NuGet cache and CLI state out of the home directory. Use when a
   machine has no dotnet on PATH, when an existing install must not be disturbed,
   when a clean-room restore is needed to reproduce a CI result, or when the
@@ -23,13 +23,12 @@ metadata:
   verified_on: "linux-arm64, .NET SDK 10.0.100, 2026-08-13"
 ---
 
-# Bootstrap the boreas-windows dev environment
+# Set up the boreas-windows dev environment
 
 Toolchain lives in one directory. Delete that directory, nothing remains.
 
-"windows" names the repository, not the host. This procedure runs on Linux and
-macOS and builds the OS-independent core. The WinUI application is Windows-only
-and is not built by anything here; see Scope.
+Runs on Linux and macOS, and builds the OS-independent core. The WinUI
+application needs Windows and is not built by anything here; see Scope.
 
 ## Scope
 
