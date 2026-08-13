@@ -49,7 +49,7 @@ Repository-owned skills live in `.agents/skills/<name>/SKILL.md`.
 
 | Skill | Read before |
 | --- | --- |
-| [setup-dotnet](.agents/skills/setup-dotnet/SKILL.md) | running any `dotnet` command when `command -v dotnet` finds nothing. Installs the SDK per-user under a temporary root, pinned from `global.json`, without sudo and without writing to `$HOME`. |
+| [bootstrap-windows-dev](.agents/skills/bootstrap-windows-dev/SKILL.md) | running any `dotnet` command when `command -v dotnet` finds nothing. Installs the SDK per-user under a temporary root, pinned from `global.json`, without sudo and without writing to `$HOME`. |
 
 `.agents/skills/` is where OpenAI Codex looks: it scans that path in every
 directory from the working directory up to the repository root. Claude Code
