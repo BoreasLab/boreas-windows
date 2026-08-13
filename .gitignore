@@ -1,0 +1,68 @@
+# Build output. Everything here is reproducible from the tree plus the pinned
+# SDK in global.json, so none of it belongs in history.
+[Bb]in/
+[Oo]bj/
+artifacts/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]64/
+
+# Publish and packaging output.
+[Pp]ublish/
+*.appx
+*.appxbundle
+*.appxupload
+*.msix
+*.msixbundle
+*.msixupload
+AppPackages/
+BundleArtifacts/
+*.nupkg
+*.snupkg
+
+# Test and coverage output.
+[Tt]est[Rr]esult*/
+*.trx
+*.coverage
+*.coverxml
+coverage*.json
+coverage*.xml
+coverage*.info
+
+# NuGet.
+*.nuget.props
+*.nuget.targets
+packages/
+!packages/build/
+.packages/
+
+# Signing material must never be committed, whatever the extension implies.
+# W0 decides where these actually live; this is the backstop.
+*.pfx
+*.snk
+*.p12
+*.cer
+*.pvk
+
+# Visual Studio, Rider and VS Code local state.
+.vs/
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.user
+*.suo
+*.userprefs
+*.sln.docstates
+*.DotSettings.user
+
+# Editor and OS noise.
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# Local tooling installed outside the repository's own dependency set.
+.dotnet/
+.tools/

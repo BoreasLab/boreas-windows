@@ -1,0 +1,29 @@
+# Pinning policy.
+#
+# The blanket rule zizmor applies by default is hash-pin everything, which is
+# the right default for a third party: a tag is a mutable pointer, so a tag
+# pin says which artifact was asked for and not which one arrived.
+#
+# It is relaxed here for two owners, deliberately and narrowly:
+#
+#   actions/*     GitHub's own actions, on the same platform already running
+#                 the workflow and already holding the token. A hash pin buys
+#                 nothing against an actor who controls the runner, and costs
+#                 a manual bump for every patch release. Major tags carry the
+#                 security fixes without the churn.
+#
+#   BTreeMap/*    Reusable workflows maintained in their own upstream
+#                 repository and vendored here verbatim. They exist to track
+#                 upstream, so freezing them to a commit defeats the thing
+#                 they are for, and this repository is not where they are
+#                 edited. See AGENTS.md.
+#
+# Everything else still needs a hash. The rule that matters is that relaxing
+# it is a written decision rather than an omission nobody noticed.
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        actions/*: ref-pin
+        BTreeMap/*: ref-pin
+        "*": hash-pin

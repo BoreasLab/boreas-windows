@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Plain net8.0, deliberately not net8.0-windows. That single choice is
+         what makes the boundary below enforceable. -->
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Boreas.Ui.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <!--
+    The functional core is compiled into this project from source rather than
+    referenced as an assembly.
+
+    This is the invariant, not a convenience: Contracts, Presentation and the
+    channel abstraction must be pure of Microsoft.UI. Because this project
+    targets a framework where those types do not exist, a `using
+    Microsoft.UI.Xaml` anywhere under these paths stops compiling here and the
+    Linux CI job goes red. The functional core stays pure because the build
+    system will not let it stop being pure.
+
+    SampleControlChannel is excluded: it marshals onto a DispatcherQueue, which
+    makes it part of the shell.
+  -->
+  <ItemGroup>
+    <Compile Include="../../src/Boreas.Ui/Contracts/**/*.cs" LinkBase="Core/Contracts" />
+    <Compile Include="../../src/Boreas.Ui/Presentation/**/*.cs" LinkBase="Core/Presentation" />
+    <Compile Include="../../src/Boreas.Ui/Services/IControlChannel.cs" Link="Core/Services/IControlChannel.cs" />
+    <Compile Include="../../src/Boreas.Ui/Services/UnimplementedControlChannel.cs" Link="Core/Services/UnimplementedControlChannel.cs" />
+    <Compile Include="../../src/Boreas.Ui/Services/UserPreferences.cs" Link="Core/Services/UserPreferences.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+</Project>

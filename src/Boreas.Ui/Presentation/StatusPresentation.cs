@@ -149,6 +149,7 @@ public sealed record StatusPresentation(
         ControlOperation.ConfigurationChanged => "Applying configuration",
         ControlOperation.NetworkChanged => "Handling a network change",
         ControlOperation.StatusSnapshot => "Reading status",
+        _ => throw Unreachable.Value(operation),
     };
 }
 

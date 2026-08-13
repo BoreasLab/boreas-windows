@@ -110,6 +110,7 @@ public sealed class ConfigurationViewModel : ObservableObject
         {
             RouteMode.Default => 0,
             RouteMode.Selected => 1,
+            _ => throw Unreachable.Value(Routes),
         };
         set => Routes = value == 1 ? RouteMode.Selected : RouteMode.Default;
     }
@@ -120,6 +121,7 @@ public sealed class ConfigurationViewModel : ObservableObject
         {
             EgressPolicy.Direct => 0,
             EgressPolicy.Relay => 1,
+            _ => throw Unreachable.Value(Egress),
         };
         set => Egress = value == 1 ? EgressPolicy.Relay : EgressPolicy.Direct;
     }
@@ -243,6 +245,7 @@ public sealed class ConfigurationViewModel : ObservableObject
             ConfigField.Address => ValidateAddress(_interfaceAddress),
             ConfigField.Mtu => ValidateMtu(_mtu),
             ConfigField.Dns => ValidateDns(_dnsServers),
+            _ => throw Unreachable.Value(field),
         };
 
         if (message is null)

@@ -31,10 +31,14 @@
       ControlBorder dk  #667ccc on canvas #090d1b ........... 4.90:1
       FocusRing light   #9f512d on canvas #f8f9ec ........... 5.35:1
       FocusRing dark    #d28460 on canvas #090d1b ........... 6.64:1
-      StatusActive     #7366ff on band   #0d1226 ........... 4.48:1
-      StatusCaution     #d8da8b on band   #0d1226 .......... 12.66:1
-      StatusIdle        #8c9dd9 on band   #0d1226 ........... 7.02:1
-      StatusFault      #d19495 on band   #0d1226 ........... 7.41:1
+      BandToneActive    #7366ff on band   #0d1226 ........... 4.48:1
+      BandToneCaution   #d8da8b on band   #0d1226 .......... 12.66:1
+      BandToneIdle      #8c9dd9 on band   #0d1226 ........... 7.02:1
+      BandToneFault     #d19495 on band   #0d1226 ........... 7.41:1
+
+    Status* is the same four tones for cream surfaces; BandTone* is for the
+    band, which is dark in both themes. tests/Boreas.Ui.Tests measures every
+    pairing in this file, so these figures are checked rather than asserted.
 
     light-bronze-600 on beige-200 is 4.44:1, so SurfaceSunken is a track and a
     hairline ground only. It never carries text.
@@ -102,6 +106,15 @@
             <SolidColorBrush x:Key="StatusCaution"   Color="#4c4e18" />
             <SolidColorBrush x:Key="StatusIdle"      Color="#263773" />
             <SolidColorBrush x:Key="StatusFault"    Color="#6b2e2f" />
+
+            <!-- Status tones for the band. The band is dark in both themes, so
+                 these are too: reusing the cream-surface tones here would put
+                 dark blue on near-black. Status* below is for the cream
+                 surfaces, and the two families never swap. -->
+            <SolidColorBrush x:Key="BandToneIdle"    Color="#8c9dd9" />
+            <SolidColorBrush x:Key="BandToneActive"  Color="#7366ff" />
+            <SolidColorBrush x:Key="BandToneCaution" Color="#d8da8b" />
+            <SolidColorBrush x:Key="BandToneFault"   Color="#d19495" />
 
             <!-- Press and pointer overlays. One template drives every button
                  variant, so the press feedback is a tint over whatever the
@@ -207,6 +220,15 @@
             <SolidColorBrush x:Key="StatusIdle"      Color="#8c9dd9" />
             <SolidColorBrush x:Key="StatusFault"    Color="#d19495" />
 
+            <!-- Status tones for the band. The band is dark in both themes, so
+                 these are too: reusing the cream-surface tones here would put
+                 dark blue on near-black. Status* below is for the cream
+                 surfaces, and the two families never swap. -->
+            <SolidColorBrush x:Key="BandToneIdle"    Color="#8c9dd9" />
+            <SolidColorBrush x:Key="BandToneActive"  Color="#7366ff" />
+            <SolidColorBrush x:Key="BandToneCaution" Color="#d8da8b" />
+            <SolidColorBrush x:Key="BandToneFault"   Color="#d19495" />
+
             <!-- In dark the tint is the canvas cream, so the accent lightens
                  on press. Darkening it here would push the ink label on the
                  accent fill toward its own colour. -->
@@ -308,6 +330,11 @@
             <SolidColorBrush x:Key="StatusCaution"   Color="{ThemeResource SystemColorWindowTextColor}" />
             <SolidColorBrush x:Key="StatusIdle"      Color="{ThemeResource SystemColorGrayTextColor}" />
             <SolidColorBrush x:Key="StatusFault"    Color="{ThemeResource SystemColorWindowTextColor}" />
+
+            <StaticResource x:Key="BandToneIdle"    ResourceKey="StatusIdle" />
+            <StaticResource x:Key="BandToneActive"  ResourceKey="StatusActive" />
+            <StaticResource x:Key="BandToneCaution" ResourceKey="StatusCaution" />
+            <StaticResource x:Key="BandToneFault"   ResourceKey="StatusFault" />
 
             <!-- No tinting under forced colours. The system pair is the whole
                  point, and an alpha overlay would break it. -->

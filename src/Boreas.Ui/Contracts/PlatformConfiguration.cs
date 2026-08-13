@@ -75,5 +75,6 @@ public abstract record ConfigurationOutcome
             Applied s => applied(s),
             RestartRequired s => restartRequired(s),
             Rejected s => rejected(s),
+            _ => throw Unreachable.Value(this),
         };
 }

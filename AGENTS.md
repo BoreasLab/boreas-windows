@@ -30,6 +30,16 @@ you will change before introducing code or dependencies.
 - Keep service states a closed domain model and preserve structured shutdown:
   stop native work before closing the Wintun session or removing the adapter.
 
+## Files This Repository Does Not Own
+
+- `.github/workflows/sync-skills.yml` is vendored verbatim from the upstream
+  `BTreeMap/SKILLs` repository. Never edit it here, including to satisfy a
+  linter: fix the upstream workflow and let the vendored copy follow. The
+  pinning policy in `.github/zizmor.yml` already exempts `BTreeMap/*` from the
+  hash-pin rule so the file passes CI unmodified.
+- `.github/skills` is a submodule. Its gitlink moves by the scheduled sync
+  workflow; do not bump it by hand.
+
 ## Boundary Rules
 
 - [docs/core-contract.md](docs/core-contract.md) is a logical handoff contract,

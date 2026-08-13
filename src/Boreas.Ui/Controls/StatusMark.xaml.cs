@@ -1,7 +1,6 @@
 using Boreas.Ui.Presentation;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
 
 namespace Boreas.Ui.Controls;
 
@@ -33,8 +32,9 @@ public sealed partial class StatusMark : UserControl
     public static readonly DependencyProperty RingThicknessProperty = DependencyProperty.Register(
         nameof(RingThickness), typeof(double), typeof(StatusMark), new PropertyMetadata(0d));
 
-    public static readonly DependencyProperty FillBrushProperty = DependencyProperty.Register(
-        nameof(FillBrush), typeof(Brush), typeof(StatusMark), new PropertyMetadata(null));
+    public static readonly DependencyProperty SurfaceProperty = DependencyProperty.Register(
+        nameof(Surface), typeof(MarkSurface), typeof(StatusMark),
+        new PropertyMetadata(MarkSurface.Canvas, OnVisualPropertyChanged));
 
     /// <summary>The single axis of identity.</summary>
     public StatusTone Tone
@@ -78,11 +78,14 @@ public sealed partial class StatusMark : UserControl
         set => SetValue(RingThicknessProperty, value);
     }
 
-    /// <summary>Solid for a dot, unset for a ring.</summary>
-    public Brush? FillBrush
+    /// <summary>
+    /// Which ground the mark sits on. The band is dark in both themes and the
+    /// canvas is not, so the two need different tone families to stay legible.
+    /// </summary>
+    public MarkSurface Surface
     {
-        get => (Brush?)GetValue(FillBrushProperty);
-        set => SetValue(FillBrushProperty, value);
+        get => (MarkSurface)GetValue(SurfaceProperty);
+        set => SetValue(SurfaceProperty, value);
     }
 
     private static void OnVisualPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) =>
@@ -90,7 +93,7 @@ public sealed partial class StatusMark : UserControl
 
     private void Sync()
     {
-        VisualStateManager.GoToState(this, Tone.ToString(), useTransitions: false);
+        VisualStateManager.GoToState(this, $"{Surface}{Tone}", useTransitions: false);
 
         // Checked at the point of use, so turning animation off mid-session
         // takes effect on the next state change rather than the next launch.
@@ -101,4 +104,11 @@ public sealed partial class StatusMark : UserControl
         // The glyph and the spinner occupy the same cell, so only one shows.
         Mark.Visibility = spin ? Visibility.Collapsed : Visibility.Visible;
     }
+}
+
+/// <summary>The two grounds a mark can sit on, closed.</summary>
+public enum MarkSurface
+{
+    Canvas,
+    Band,
 }

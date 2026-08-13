@@ -1,3 +1,4 @@
+using Boreas.Ui.Contracts;
 using Boreas.Ui.Presentation;
 using Boreas.Ui.Services;
 using Microsoft.UI.Xaml.Controls;
@@ -22,6 +23,7 @@ public sealed partial class SettingsView : Page
             ThemePreference.System => 0,
             ThemePreference.Light => 1,
             ThemePreference.Dark => 2,
+            _ => throw Unreachable.Value(Shell.Theme),
         };
         set => Shell.Theme = value switch
         {

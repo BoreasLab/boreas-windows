@@ -44,6 +44,7 @@ public abstract record ServiceState
             Running s => running(s),
             Stopping s => stopping(s),
             Failed s => failed(s),
+            _ => throw Unreachable.Value(this),
         };
 }
 

@@ -1,3 +1,4 @@
+using Boreas.Ui.Contracts;
 using Boreas.Ui.Presentation;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -59,6 +60,7 @@ public sealed partial class NetworkView : Page
             ConfigField.Address => AddressInput,
             ConfigField.Mtu => MtuInput,
             ConfigField.Dns => DnsInput,
+            _ => throw Unreachable.Value(field),
         };
 
         target.Focus(FocusState.Programmatic);
@@ -80,6 +82,7 @@ public sealed partial class NetworkView : Page
             StatusTone.Caution => Glyphs.Warning,
             StatusTone.Fault => Glyphs.Error,
             StatusTone.Idle => Glyphs.Info,
+            _ => throw Unreachable.Value(tone),
         };
         OutcomeBanner.Title = tone switch
         {
@@ -87,6 +90,7 @@ public sealed partial class NetworkView : Page
             StatusTone.Caution => "Saved, and waiting for a restart",
             StatusTone.Fault => "The service did not accept these settings",
             StatusTone.Idle => "Settings",
+            _ => throw Unreachable.Value(tone),
         };
         OutcomeBanner.Message = message;
         OutcomeBanner.ActionLabel = null;

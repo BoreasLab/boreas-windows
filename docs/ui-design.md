@@ -187,6 +187,36 @@ can and cannot do, including that closing it does not stop the tunnel.
   effect on the next state change rather than the next launch. Nothing is
   gated behind an animation.
 
+## What CI checks
+
+`.github/workflows/ci.yml` runs three jobs. Two of them bear on this document.
+
+`core` runs on Linux and builds `tests/Boreas.Ui.Tests`, which compiles the
+functional core from source into a plain `net8.0` project. That target is the
+enforcement: `Contracts`, `Presentation` and the channel abstraction have to
+stay free of `Microsoft.UI`, because a reference to it stops compiling there.
+The suite then checks, against the source rather than against this document:
+
+- every state pair of the channel and the service produces readable text, an
+  announcement carrying everything the tone carries, and a legal action;
+- a disconnected channel makes no claim about the tunnel, and "Protected"
+  appears exactly when the channel is connected, the session is running, and
+  the bypass is bound;
+- the form accepts every unambiguous spelling of a value, stays quiet until a
+  field is finished, clears an error the moment it stops being true, and
+  preserves entry through a rejection;
+- the six container states are distinguishable and carry items only where they
+  should;
+- every contrast pairing in `Design/Tokens.xaml`, recomputed from the hex,
+  against the threshold for text or for a non-text mark;
+- danger and every status tone are perceptually distant from the accent;
+- the three theme dictionaries define the same roles, high contrast defines no
+  colour of its own, every resource reference resolves, no colour is named
+  outside the token file, and every spacing and radius value is on its scale.
+
+`app` runs on Windows and is the only place WinUI 3 builds. It produces an
+unsigned artifact for inspection, not a release candidate.
+
 ## Still open
 
 - Real brand artwork. `Controls/Wordmark.xaml` draws a provisional mark and
@@ -198,3 +228,6 @@ can and cannot do, including that closing it does not stop the tunnel.
 - Whether the status band should show a live throughput reading. It does not
   today, because a counter that ticks without a pushed update would be
   inventing motion the service did not report.
+- Nothing verifies the interface as rendered. Keyboard order, focus visuals,
+  screen-reader output and both themes on a display are checked by reading, not
+  by CI, and belong in the device gate.

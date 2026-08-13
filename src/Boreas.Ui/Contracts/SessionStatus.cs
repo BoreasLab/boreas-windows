@@ -54,5 +54,6 @@ public abstract record EgressBypass
         {
             Bound s => bound(s),
             Degraded s => degraded(s),
+            _ => throw Unreachable.Value(this),
         };
 }

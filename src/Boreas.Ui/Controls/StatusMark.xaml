@@ -1,15 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    One mark for every status in the application: the ring on the band, the
-    dot in the title-bar chip, the icon on a banner. Tone is its single axis
-    of identity; diameter and glyph size are position, not identity.
+    One mark for every status in the application: the ring on the band, the dot
+    in the title-bar chip, the icon on a banner.
 
-    Tone is expressed as a visual state rather than a converter so the brushes
-    are ThemeResource lookups. A converter would return a brush captured at
-    bind time and would not follow a theme change.
+    Two closed axes, and both are needed. Tone is what the mark means. Surface
+    is which ground it sits on, and it exists because the status band is dark
+    in both themes while the chip and the banner sit on the cream canvas: one
+    tone family cannot be legible on both. BandTone* and Status* carry the same
+    four meanings for the two grounds, and tests/Boreas.Ui.Tests measures each
+    family against the surface it is declared for.
 
-    The mark is never the only carrier of a status. Every place it appears,
-    the state is also written next to it in words, which is why it is raw to
+    Tone is a visual state rather than a converter so the brushes stay
+    ThemeResource lookups. A converter would capture a brush at bind time and
+    would not follow a theme change.
+
+    The mark is never the only carrier of a status. Everywhere it appears the
+    state is also written next to it in words, which is why it is raw to
     assistive technology: announcing it too would say the state twice.
 -->
 <UserControl
@@ -25,8 +31,7 @@
 
         <Ellipse x:Name="Ring"
                  StrokeThickness="{x:Bind RingThickness, Mode=OneWay}"
-                 Stroke="{ThemeResource StatusIdle}"
-                 Fill="{x:Bind FillBrush, Mode=OneWay}" />
+                 Stroke="{ThemeResource StatusIdle}" />
 
         <ProgressRing x:Name="Busy"
                       IsActive="False"
@@ -45,9 +50,11 @@
 
         <VisualStateManager.VisualStateGroups>
             <VisualStateGroup x:Name="ToneStates">
-                <VisualState x:Name="Idle" />
 
-                <VisualState x:Name="Active">
+                <!-- On the cream canvas and cream cards. -->
+                <VisualState x:Name="CanvasIdle" />
+
+                <VisualState x:Name="CanvasActive">
                     <VisualState.Setters>
                         <Setter Target="Ring.Stroke" Value="{ThemeResource StatusActive}" />
                         <Setter Target="Mark.Foreground" Value="{ThemeResource StatusActive}" />
@@ -55,7 +62,7 @@
                     </VisualState.Setters>
                 </VisualState>
 
-                <VisualState x:Name="Caution">
+                <VisualState x:Name="CanvasCaution">
                     <VisualState.Setters>
                         <Setter Target="Ring.Stroke" Value="{ThemeResource StatusCaution}" />
                         <Setter Target="Mark.Foreground" Value="{ThemeResource StatusCaution}" />
@@ -63,11 +70,44 @@
                     </VisualState.Setters>
                 </VisualState>
 
-                <VisualState x:Name="Fault">
+                <VisualState x:Name="CanvasFault">
                     <VisualState.Setters>
                         <Setter Target="Ring.Stroke" Value="{ThemeResource StatusFault}" />
                         <Setter Target="Mark.Foreground" Value="{ThemeResource StatusFault}" />
                         <Setter Target="Busy.Foreground" Value="{ThemeResource StatusFault}" />
+                    </VisualState.Setters>
+                </VisualState>
+
+                <!-- On the dark band, in either theme. -->
+                <VisualState x:Name="BandIdle">
+                    <VisualState.Setters>
+                        <Setter Target="Ring.Stroke" Value="{ThemeResource BandToneIdle}" />
+                        <Setter Target="Mark.Foreground" Value="{ThemeResource BandToneIdle}" />
+                        <Setter Target="Busy.Foreground" Value="{ThemeResource BandToneIdle}" />
+                    </VisualState.Setters>
+                </VisualState>
+
+                <VisualState x:Name="BandActive">
+                    <VisualState.Setters>
+                        <Setter Target="Ring.Stroke" Value="{ThemeResource BandToneActive}" />
+                        <Setter Target="Mark.Foreground" Value="{ThemeResource BandToneActive}" />
+                        <Setter Target="Busy.Foreground" Value="{ThemeResource BandToneActive}" />
+                    </VisualState.Setters>
+                </VisualState>
+
+                <VisualState x:Name="BandCaution">
+                    <VisualState.Setters>
+                        <Setter Target="Ring.Stroke" Value="{ThemeResource BandToneCaution}" />
+                        <Setter Target="Mark.Foreground" Value="{ThemeResource BandToneCaution}" />
+                        <Setter Target="Busy.Foreground" Value="{ThemeResource BandToneCaution}" />
+                    </VisualState.Setters>
+                </VisualState>
+
+                <VisualState x:Name="BandFault">
+                    <VisualState.Setters>
+                        <Setter Target="Ring.Stroke" Value="{ThemeResource BandToneFault}" />
+                        <Setter Target="Mark.Foreground" Value="{ThemeResource BandToneFault}" />
+                        <Setter Target="Busy.Foreground" Value="{ThemeResource BandToneFault}" />
                     </VisualState.Setters>
                 </VisualState>
             </VisualStateGroup>

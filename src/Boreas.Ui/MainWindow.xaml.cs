@@ -1,3 +1,4 @@
+using Boreas.Ui.Contracts;
 using Boreas.Ui.Presentation;
 using Boreas.Ui.Services;
 using Boreas.Ui.Views;
@@ -62,6 +63,7 @@ public sealed partial class MainWindow : Window
             ThemePreference.System => ElementTheme.Default,
             ThemePreference.Light => ElementTheme.Light,
             ThemePreference.Dark => ElementTheme.Dark,
+            _ => throw Unreachable.Value(preference),
         };
     }
 
@@ -123,6 +125,7 @@ public sealed partial class MainWindow : Window
             NavigationSection.Diagnostics => typeof(DiagnosticsView),
             NavigationSection.Settings => typeof(SettingsView),
             NavigationSection.About => typeof(AboutView),
+            _ => throw Unreachable.Value(section),
         };
 
         if (ContentFrame.CurrentSourcePageType == page)

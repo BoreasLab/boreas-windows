@@ -1,0 +1,209 @@
+# Continuous integration for the Windows control client.
+#
+# Two effect domains, so two jobs.
+#
+#   core  ubuntu, cheap. Builds and runs the OS-independent laws: the state
+#         machine the interface renders, the form's parser, and the design
+#         system measured out of the XAML. Also the boundary check: the test
+#         project targets plain net8.0 and compiles the functional core from
+#         source, so a Microsoft.UI reference creeping into Contracts,
+#         Presentation or the channel abstraction fails here.
+#
+#   app   windows, the only place WinUI 3 builds. Produces the artifact.
+#
+# There is no `needs:` edge between them. Neither consumes the other's output,
+# and running both means one push reports both results instead of hiding the
+# second behind the first.
+#
+# Assertions about the tunnel itself belong to the phases that build it. When
+# the control protocol lands, its conformance tests join `core`, and the
+# device matrix in docs/implementation-plan.md runs where real hardware is.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# No ambient capability. Each job asks for exactly what it needs, and none of
+# them needs more than read.
+permissions: {}
+
+concurrency:
+  group: ci-${{ github.ref }}
+  # Only the newest run of a branch under review is interesting; a push to the
+  # default branch is a record and is allowed to finish.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "true"
+
+jobs:
+  core:
+    name: Core laws
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The job reads the tree and writes nothing back, so it has no use
+          # for a credential in the local git config.
+          persist-credentials: false
+          submodules: false
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      # --locked-mode is not used: no lock file exists until W0 pins the
+      # dependency set. Central package management already forbids floating
+      # versions, so every package resolves to the exact version in
+      # Directory.Packages.props.
+      - name: Restore
+        shell: bash
+        run: dotnet restore tests/Boreas.Ui.Tests/Boreas.Ui.Tests.csproj
+
+      - name: Build
+        shell: bash
+        run: >-
+          dotnet build tests/Boreas.Ui.Tests/Boreas.Ui.Tests.csproj
+          --configuration Release --no-restore
+
+      - name: Test
+        shell: bash
+        run: >-
+          dotnet test tests/Boreas.Ui.Tests/Boreas.Ui.Tests.csproj
+          --configuration Release --no-build
+          --logger "trx;LogFileName=core.trx"
+          --results-directory artifacts/test-results
+
+      - name: Upload test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results
+          path: artifacts/test-results
+          retention-days: 14
+
+  app:
+    name: App (${{ matrix.configuration }}, ${{ matrix.platform }})
+    runs-on: windows-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    strategy:
+      # Every cell's result matters on its own. Cancelling the arm64 build
+      # because x64 broke turns "which targets build" into "one target broke".
+      fail-fast: false
+      matrix:
+        # Named cells rather than a product: the Debug cell exists only to
+        # prove the sample channel still compiles, and there is no reason to
+        # build it twice.
+        include:
+          - configuration: Release
+            platform: x64
+            rid: win-x64
+            publish: true
+          - configuration: Release
+            platform: ARM64
+            rid: win-arm64
+            publish: true
+          - configuration: Debug
+            platform: x64
+            rid: win-x64
+            publish: false
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          submodules: false
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      # Matrix values reach the shell through the environment and are read as
+      # quoted variables. Nothing here is attacker-controlled today, but a
+      # value spliced into a run: block is evaluated as script, and that is a
+      # habit worth not having when the next value comes from an event
+      # payload. One shell across every job, so there is one quoting rule.
+      - name: Restore
+        shell: bash
+        env:
+          PLATFORM: ${{ matrix.platform }}
+        run: dotnet restore src/Boreas.Ui/Boreas.Ui.csproj -p:Platform="$PLATFORM"
+
+      - name: Build
+        shell: bash
+        env:
+          CONFIGURATION: ${{ matrix.configuration }}
+          PLATFORM: ${{ matrix.platform }}
+        run: >-
+          dotnet build src/Boreas.Ui/Boreas.Ui.csproj
+          --configuration "$CONFIGURATION"
+          -p:Platform="$PLATFORM"
+          --no-restore
+
+      - name: Publish
+        if: ${{ matrix.publish }}
+        shell: bash
+        env:
+          CONFIGURATION: ${{ matrix.configuration }}
+          PLATFORM: ${{ matrix.platform }}
+          RID: ${{ matrix.rid }}
+        run: >-
+          dotnet publish src/Boreas.Ui/Boreas.Ui.csproj
+          --configuration "$CONFIGURATION"
+          -p:Platform="$PLATFORM"
+          --runtime "$RID"
+          --output "artifacts/app/$PLATFORM"
+
+      # Unsigned, unpinned, and built from a dependency set W0 has not yet
+      # admitted. This is a build output for inspection, not a release
+      # candidate, and the retention window says so.
+      - name: Upload unsigned build
+        if: ${{ matrix.publish }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: boreas-ui-unsigned-${{ matrix.platform }}
+          path: artifacts/app/${{ matrix.platform }}
+          retention-days: 7
+          if-no-files-found: error
+
+  workflows:
+    name: Workflow lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          submodules: false
+
+      # Fetched by exact version and verified against a checksum recorded here,
+      # so this step cannot be changed by anything happening upstream. It also
+      # ShellChecks the run: blocks above.
+      - name: Run actionlint
+        shell: bash
+        env:
+          ACTIONLINT_VERSION: 1.7.12
+          ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+        run: ./.github/scripts/actionlint.sh
+
+      # zizmor reads workflows for the failure modes actionlint does not model:
+      # excessive permissions, unpinned actions, credential persistence, and
+      # untrusted interpolation into a shell.
+      - name: Run zizmor
+        shell: bash
+        env:
+          ZIZMOR_VERSION: 1.29.0
+        run: ./.github/scripts/zizmor.sh

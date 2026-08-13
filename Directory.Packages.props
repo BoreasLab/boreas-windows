@@ -5,13 +5,28 @@
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
 
-  <!-- Floating versions are deliberate and temporary. W0 replaces each of
-       these with an exact pin plus a lock file, after the license,
-       maintenance, release and transitive-graph review that AGENTS.md
-       requires. Do not ship a release candidate against a floating range. -->
+  <!--
+    Every version here is exact. Central package management rejects floating
+    ranges outright (NU1011), and that is the right rule: a range makes a red
+    build indistinguishable from an upstream release, and it makes today's
+    build unreproducible tomorrow.
+
+    W0 still owns admission. These are working pins, not a reviewed dependency
+    set: the license, maintenance, release cadence and transitive graph of the
+    Windows App SDK and of the Wintun redistributable are still open, and no
+    release candidate may ship against them until that review lands.
+  -->
   <ItemGroup>
-    <PackageVersion Include="Microsoft.WindowsAppSDK" Version="1.7.*" />
-    <PackageVersion Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.*" />
+    <PackageVersion Include="Microsoft.WindowsAppSDK" Version="1.7.260224002" />
+    <PackageVersion Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.6584" />
+  </ItemGroup>
+
+  <!-- The test stack never ships, so it carries none of the redistribution
+       obligations under review above. -->
+  <ItemGroup>
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
   </ItemGroup>
 
 </Project>

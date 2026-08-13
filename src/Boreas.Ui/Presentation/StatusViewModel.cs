@@ -53,6 +53,7 @@ public sealed class StatusViewModel : ObservableObject, IDisposable
         PrimaryAction.Stop => "Stop Boreas",
         PrimaryAction.Retry => "Try starting again",
         PrimaryAction.Reconnect => "Reconnect",
+        _ => throw Unreachable.Value(Presentation.Action),
     };
 
     public bool HasPrimaryAction => Presentation.Action != PrimaryAction.None;

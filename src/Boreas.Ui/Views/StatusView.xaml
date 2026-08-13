@@ -65,6 +65,7 @@
                                              Tone="{x:Bind ViewModel.Presentation.Tone, Mode=OneWay}"
                                              Glyph="{x:Bind ViewModel.Presentation.Glyph, Mode=OneWay}"
                                              IsBusy="{x:Bind ViewModel.Presentation.ShowProgress, Mode=OneWay}"
+                                             Surface="Band"
                                              Diameter="56"
                                              GlyphSize="24"
                                              RingThickness="2"

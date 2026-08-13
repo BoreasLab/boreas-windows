@@ -1,0 +1,13 @@
+{
+  "$comment": [
+    "W0 owns the exact SDK pin. This records the band CI and local builds agree",
+    "on so a runner image bump cannot silently change the compiler.",
+    "rollForward latestFeature accepts newer 8.0.x patch and feature bands and",
+    "refuses 9.0 and above."
+  ],
+  "sdk": {
+    "version": "8.0.100",
+    "rollForward": "latestFeature",
+    "allowPrerelease": false
+  }
+}

@@ -54,6 +54,7 @@ public sealed class DiagnosticsViewModel : ObservableObject, IDisposable
             ControlEventKind.Command => 2,
             ControlEventKind.Channel => 3,
             ControlEventKind.Failure => 4,
+            _ => throw Unreachable.Value(_filter),
         };
         set
         {
@@ -198,5 +199,6 @@ public sealed record EventRow(
         ControlEventKind.Command => "Command",
         ControlEventKind.Channel => "Channel",
         ControlEventKind.Failure => "Failure",
+        _ => throw Unreachable.Value(kind),
     };
 }

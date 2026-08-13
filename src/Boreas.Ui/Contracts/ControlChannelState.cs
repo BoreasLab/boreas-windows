@@ -53,6 +53,7 @@ public abstract record ControlChannelState
             Unavailable s => unavailable(s),
             Unauthorized s => unauthorized(s),
             VersionMismatch s => versionMismatch(s),
+            _ => throw Unreachable.Value(this),
         };
 
     /// <summary>True only when a control command may be sent.</summary>

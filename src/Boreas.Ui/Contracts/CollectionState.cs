@@ -42,6 +42,7 @@ public abstract record CollectionState<T>
             Filtered s => filtered(s),
             Partial s => partial(s),
             Ready s => ready(s),
+            _ => throw Unreachable.Value(this),
         };
 
     /// <summary>

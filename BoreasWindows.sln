@@ -1,8 +1,12 @@
-Microsoft Visual Studio Solution File, Format Version 12.00
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Boreas.Ui", "src\Boreas.Ui\Boreas.Ui.csproj", "{4B1D2C7E-0E5A-4C1B-9F3D-6A2E8C4D1B90}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{60DEDEED-5415-48CB-8B5E-3D93DDFD8D40}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Boreas.Ui.Tests", "tests\Boreas.Ui.Tests\Boreas.Ui.Tests.csproj", "{6139D974-79F1-4975-81B5-AA9CCA2B91EC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -20,8 +24,19 @@ Global
 		{4B1D2C7E-0E5A-4C1B-9F3D-6A2E8C4D1B90}.Release|ARM64.Build.0 = Release|ARM64
 		{4B1D2C7E-0E5A-4C1B-9F3D-6A2E8C4D1B90}.Release|x64.ActiveCfg = Release|x64
 		{4B1D2C7E-0E5A-4C1B-9F3D-6A2E8C4D1B90}.Release|x64.Build.0 = Release|x64
+		{6139D974-79F1-4975-81B5-AA9CCA2B91EC}.Debug|ARM64.ActiveCfg = Debug|Any CPU
+		{6139D974-79F1-4975-81B5-AA9CCA2B91EC}.Debug|ARM64.Build.0 = Debug|Any CPU
+		{6139D974-79F1-4975-81B5-AA9CCA2B91EC}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{6139D974-79F1-4975-81B5-AA9CCA2B91EC}.Debug|x64.Build.0 = Debug|Any CPU
+		{6139D974-79F1-4975-81B5-AA9CCA2B91EC}.Release|ARM64.ActiveCfg = Release|Any CPU
+		{6139D974-79F1-4975-81B5-AA9CCA2B91EC}.Release|ARM64.Build.0 = Release|Any CPU
+		{6139D974-79F1-4975-81B5-AA9CCA2B91EC}.Release|x64.ActiveCfg = Release|Any CPU
+		{6139D974-79F1-4975-81B5-AA9CCA2B91EC}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{6139D974-79F1-4975-81B5-AA9CCA2B91EC} = {60DEDEED-5415-48CB-8B5E-3D93DDFD8D40}
 	EndGlobalSection
 EndGlobal
