@@ -33,7 +33,6 @@
     <Compile Include="../../src/Boreas.Ui/Presentation/**/*.cs" LinkBase="Core/Presentation" />
     <Compile Include="../../src/Boreas.Ui/Services/IControlChannel.cs" Link="Core/Services/IControlChannel.cs" />
     <Compile Include="../../src/Boreas.Ui/Services/UnimplementedControlChannel.cs" Link="Core/Services/UnimplementedControlChannel.cs" />
-    <Compile Include="../../src/Boreas.Ui/Services/UserPreferences.cs" Link="Core/Services/UserPreferences.cs" />
   </ItemGroup>
 
   <ItemGroup>

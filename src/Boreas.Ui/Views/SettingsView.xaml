@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    This app's own preferences. Deliberately short, and deliberately separate
-    from Network: nothing here travels over the control pipe or changes what
-    the service does.
+    What this app does about its own appearance. Deliberately short, and
+    deliberately separate from Network: nothing here travels over the control
+    pipe or changes what the service does.
+
+    The page states rather than offers. It holds no control because the app
+    holds no appearance state: see SettingsView.xaml.cs.
 -->
 <Page
     x:Class="Boreas.Ui.Views.SettingsView"
@@ -19,21 +22,19 @@
                            Text="How this window looks. The tunnel is unaffected by anything on this page." />
             </StackPanel>
 
-            <StackPanel Spacing="{StaticResource SpaceLg}">
+            <!--
+                Appearance is stated, not chosen. A theme picker stores a
+                decision that outlives the moment it was made: choose Dark
+                once, switch Windows to light later, and the window stays dark
+                with the explanation two pages away. Following the system has
+                no such failure, so it is what happens, and this says so.
+            -->
+            <StackPanel Spacing="{StaticResource SpaceSm}">
                 <TextBlock Text="Appearance" Style="{StaticResource TitleMd}" />
-
-                <!-- Following Windows is the default, and it is first, because
-                     it is right for almost everyone. -->
-                <RadioButtons Header="Theme"
-                              SelectedIndex="{x:Bind ThemeIndex, Mode=TwoWay}">
-                    <RadioButton Content="Follow Windows" />
-                    <RadioButton Content="Light" />
-                    <RadioButton Content="Dark" />
-                </RadioButtons>
-
-                <TextBlock Style="{StaticResource FieldHint}" Margin="0"
-                           Text="Applied immediately and remembered for next time." />
+                <TextBlock Style="{StaticResource BodyMd}" MaxWidth="560" HorizontalAlignment="Left"
+                           Text="Boreas follows the light or dark appearance set in Windows, and changes with it. Change it under Settings, Personalisation, Colours." />
             </StackPanel>
+
         </StackPanel>
     </ScrollViewer>
 </Page>

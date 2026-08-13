@@ -1,21 +1,27 @@
-using Boreas.Ui.Contracts;
 using Boreas.Ui.Services;
 
 namespace Boreas.Ui.Presentation;
 
 /// <summary>
-/// Window-level state: the channel chip, the channel banner, and the theme.
+/// Window-level state: the channel chip and the channel banner.
 /// </summary>
+/// <remarks>
+/// Appearance is not among them, and that is the design. A theme preference
+/// was a third state beside the two the platform already has, stored in a file
+/// that outlived the session it was chosen in: someone who picked Dark once
+/// kept a dark window after switching Windows to light, with the control that
+/// explains it two pages away and no reason left to look for it. The window
+/// now sets no theme at all, so it inherits the system's and follows it when
+/// it changes, which is both the behaviour people expect and one fewer state
+/// this application can hold an opinion about.
+/// </remarks>
 public sealed class ShellViewModel : ObservableObject, IDisposable
 {
     private readonly IControlChannel _channel;
-    private readonly PreferenceStore _store;
 
-    public ShellViewModel(IControlChannel channel, PreferenceStore store, bool usingSampleData)
+    public ShellViewModel(IControlChannel channel, bool usingSampleData)
     {
         _channel = channel;
-        _store = store;
-        Preferences = store.Load();
         UsingSampleData = usingSampleData;
 
         Reconnect = new AsyncCommand(_channel.RefreshAsync);
@@ -33,27 +39,6 @@ public sealed class ShellViewModel : ObservableObject, IDisposable
     public AsyncCommand Reconnect { get; }
 
     public ChannelPresentation Channel => ChannelPresentation.For(_channel.Channel);
-
-    private Preferences Preferences { get; set; }
-
-    public ThemePreference Theme
-    {
-        get => Preferences.Theme;
-        set
-        {
-            if (Preferences.Theme == value)
-            {
-                return;
-            }
-
-            Preferences = Preferences with { Theme = value };
-            _store.Save(Preferences);
-            Raise();
-            ThemeChanged?.Invoke(this, value);
-        }
-    }
-
-    public event EventHandler<ThemePreference>? ThemeChanged;
 
     private void OnChannelChanged(object? sender, EventArgs e) => Raise(nameof(Channel));
 

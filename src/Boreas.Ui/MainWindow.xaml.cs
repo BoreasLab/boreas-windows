@@ -19,11 +19,10 @@ public sealed partial class MainWindow : Window
 
         _viewModel = App.Shell;
 
-        // Named handlers, not lambdas, because both have to come off again and
+        // A named handler, not a lambda, because it has to come off again and
         // an anonymous delegate cannot be removed. The shell outlives this
         // window, so a subscription left behind keeps the window alive with it.
         _viewModel.PropertyChanged += OnShellPropertyChanged;
-        _viewModel.ThemeChanged += OnThemeChanged;
 
         Title = "Boreas";
 
@@ -37,7 +36,12 @@ public sealed partial class MainWindow : Window
 
         SampleMarker.Visibility = _viewModel.UsingSampleData ? Visibility.Visible : Visibility.Collapsed;
 
-        ApplyTheme(_viewModel.Theme);
+        // Nothing sets Shell.RequestedTheme, here or anywhere, on purpose.
+        // Left at ElementTheme.Default the tree resolves its ThemeResource
+        // lookups against the system's setting and re-resolves them when that
+        // setting changes, so the window follows Windows at runtime with no
+        // appearance state of its own to hold, persist, or leave stale.
+
         ReserveCaptionSpace();
         RenderChannel();
 
@@ -59,14 +63,11 @@ public sealed partial class MainWindow : Window
         Closed -= OnClosed;
         App.NavigationRequested -= OnNavigationRequested;
         _viewModel.PropertyChanged -= OnShellPropertyChanged;
-        _viewModel.ThemeChanged -= OnThemeChanged;
 
         App.Shutdown();
     }
 
     private void OnShellPropertyChanged(object? sender, PropertyChangedEventArgs args) => RenderChannel();
-
-    private void OnThemeChanged(object? sender, ThemePreference theme) => ApplyTheme(theme);
 
     /// <summary>
     /// Keeps the chip clear of the minimise, maximise and close buttons at
@@ -77,17 +78,6 @@ public sealed partial class MainWindow : Window
     {
         var scale = TitleBar.XamlRoot?.RasterizationScale ?? 1d;
         CaptionInset.Width = new GridLength(AppWindow.TitleBar.RightInset / scale);
-    }
-
-    private void ApplyTheme(ThemePreference preference)
-    {
-        Shell.RequestedTheme = preference switch
-        {
-            ThemePreference.System => ElementTheme.Default,
-            ThemePreference.Light => ElementTheme.Light,
-            ThemePreference.Dark => ElementTheme.Dark,
-            _ => throw Unreachable.Value(preference),
-        };
     }
 
     private void RenderChannel()

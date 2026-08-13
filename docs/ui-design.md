@@ -166,7 +166,12 @@ carries no log stream. Six container states are six regions with one visible;
 "nothing recorded yet" and "nothing matches this filter" are different screens
 with different actions.
 
-**Settings.** Theme only, and it says the tunnel is unaffected.
+**Settings.** No controls. It states that appearance follows Windows and that
+the tunnel is unaffected by anything on the page. There is deliberately no
+theme picker: a stored choice outlives the moment it was made, so a window
+chosen dark once stays dark after Windows is switched to light, with the
+control that explains it two pages away. The window sets no theme, inherits the
+system's, and follows it when it changes.
 
 **About.** Versions read at runtime, and a plain statement of what the window
 can and cannot do, including that closing it does not stop the tunnel.

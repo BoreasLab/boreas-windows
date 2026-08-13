@@ -29,8 +29,6 @@ public partial class App : Application
 
     public static bool UsingSampleData { get; private set; }
 
-    public static PreferenceStore Preferences { get; } = new();
-
     /// <summary>
     /// Window-level state, owned here so the window and the settings page
     /// edit one value rather than keeping two copies to synchronise.
@@ -59,7 +57,7 @@ public partial class App : Application
         UsingSampleData = false;
 #endif
 
-        Shell = new ShellViewModel(Channel, Preferences, UsingSampleData);
+        Shell = new ShellViewModel(Channel, UsingSampleData);
 
         _window = new MainWindow();
         _window.Activate();
