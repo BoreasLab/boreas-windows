@@ -11,5 +11,6 @@ need a coordinated `boreas-core` change.
 | [UI Design](ui-design.md) | the control client's tokens, screens, state presentation and interaction rules |
 | [Implementation Plan](implementation-plan.md) | work order, acceptance gates and Windows test matrix |
 | [Verified Inputs](verified-inputs.md) | fact-checked platform inputs, source links, and unresolved decisions |
+| [Set up .NET](setup-dotnet/SKILL.md) | building and testing the core on a machine with no system .NET, without sudo and without touching $HOME |
 
 The related core specifications are [platforms](https://github.com/BoreasLab/boreas-core/blob/main/docs/platforms.md), [architecture](https://github.com/BoreasLab/boreas-core/blob/main/docs/architecture.md), and the [verification ledger](https://github.com/BoreasLab/boreas-core/blob/main/docs/verification.md).

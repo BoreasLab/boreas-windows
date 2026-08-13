@@ -39,6 +39,10 @@ you will change before introducing code or dependencies.
   hash-pin rule so the file passes CI unmodified.
 - `.github/skills` is a submodule. Its gitlink moves by the scheduled sync
   workflow; do not bump it by hand.
+- `.claude/skills` is a symlink to `.github/skills`, so it is the same upstream
+  content under another name. A skill written for this repository does not go
+  there. `docs/setup-dotnet/SKILL.md` is written in skill format and kept under
+  `docs/` for exactly this reason.
 
 ## Boundary Rules
 

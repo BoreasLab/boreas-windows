@@ -38,10 +38,12 @@ concurrency:
   # default branch is a record and is allowed to finish.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# DOTNET_SKIP_FIRST_TIME_EXPERIENCE is deliberately absent: it has been
+# unsupported since .NET Core 3.0, and DOTNET_NOLOGO replaced it. Setting it
+# looked like belt and braces and was a no-op.
 env:
   DOTNET_NOLOGO: "true"
   DOTNET_CLI_TELEMETRY_OPTOUT: "true"
-  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "true"
 
 jobs:
   core:
