@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Six container states, six regions, exactly one visible. They are separate
+    screens rather than one region with flags: nothing recorded yet reads
+    differently from nothing matching a filter, and both read differently from
+    a list that failed to load.
+
+    Rows are grouped by space, not divided by hairlines. A rule under every
+    row of a long list adds a hundred marks and no information.
+-->
+<Page
+    x:Class="Boreas.Ui.Views.DiagnosticsView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:muxc="using:Microsoft.UI.Xaml.Controls"
+    xmlns:presentation="using:Boreas.Ui.Presentation"
+    Background="Transparent">
+
+    <Grid RowSpacing="{StaticResource SpaceLg}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Spacing="{StaticResource SpaceXs}">
+            <TextBlock Text="Diagnostics" Style="{StaticResource DisplaySm}" />
+            <TextBlock Style="{StaticResource BodyMd}" MaxWidth="620" HorizontalAlignment="Left"
+                       Text="What the Boreas service reported to this app: state changes, commands, and failures. It carries no traffic and no packet contents." />
+        </StackPanel>
+
+        <!-- Filter and actions. Both are visible without hovering, because
+             hover does not exist on touch and is invisible from a keyboard. -->
+        <Grid Grid.Row="1" ColumnSpacing="{StaticResource SpaceSm}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="{StaticResource SpaceXs}"
+                        VerticalAlignment="Center">
+                <TextBlock x:Name="FilterLabel"
+                           Text="Show"
+                           Style="{StaticResource CaptionText}"
+                           VerticalAlignment="Center" />
+                <ComboBox SelectedIndex="{x:Bind ViewModel.FilterIndex, Mode=TwoWay}"
+                          MinWidth="180"
+                          AutomationProperties.LabeledBy="{x:Bind FilterLabel}">
+                    <ComboBoxItem Content="Everything" />
+                    <ComboBoxItem Content="State changes" />
+                    <ComboBoxItem Content="Commands" />
+                    <ComboBoxItem Content="Channel" />
+                    <ComboBoxItem Content="Failures" />
+                </ComboBox>
+            </StackPanel>
+
+            <Button Grid.Column="1" Style="{StaticResource SecondaryButton}" Click="OnCopy">
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpaceXs}">
+                    <FontIcon Glyph="&#xE8C8;" FontSize="{StaticResource TypeBodySm}" />
+                    <!-- Confirms in place and then goes quiet, rather than
+                         throwing a toast into a corner nobody is looking at. -->
+                    <TextBlock x:Name="CopyLabel" Text="Copy for support" />
+                </StackPanel>
+            </Button>
+
+            <Button Grid.Column="2"
+                    Style="{StaticResource SecondaryButton}"
+                    Command="{x:Bind ViewModel.Reload, Mode=OneWay}">
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpaceXs}">
+                    <ProgressRing Style="{StaticResource InlinePendingOnCanvas}"
+                                  IsActive="{x:Bind ViewModel.Reload.IsRunning, Mode=OneWay}"
+                                  VerticalAlignment="Center" />
+                    <TextBlock Text="Refresh" VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
+        </Grid>
+
+        <Grid Grid.Row="2">
+
+            <!-- Loading. The placeholders are the height of a real row, so
+                 nothing moves when the list arrives. -->
+            <StackPanel x:Name="LoadingState" Spacing="{StaticResource SpaceXs}"
+                        Visibility="Collapsed" VerticalAlignment="Top">
+                <Border Height="{StaticResource SpaceLg}" Background="{ThemeResource SurfaceCard}" CornerRadius="{StaticResource RadiusMd}" />
+                <Border Height="{StaticResource SpaceLg}" Background="{ThemeResource SurfaceCard}" CornerRadius="{StaticResource RadiusMd}" />
+                <Border Height="{StaticResource SpaceLg}" Background="{ThemeResource SurfaceCard}" CornerRadius="{StaticResource RadiusMd}" />
+            </StackPanel>
+
+            <Border x:Name="FailedState" Style="{StaticResource OutlinedCard}"
+                    Visibility="Collapsed" VerticalAlignment="Top" HorizontalAlignment="Left">
+                <StackPanel Spacing="{StaticResource SpaceSm}">
+                    <TextBlock Text="These events could not be read" Style="{StaticResource TitleSm}" />
+                    <TextBlock x:Name="FailedMessage" Style="{StaticResource BodySm}"
+                               MaxWidth="520" HorizontalAlignment="Left" />
+                    <Button Style="{StaticResource SecondaryButton}"
+                            Content="Try again"
+                            HorizontalAlignment="Left"
+                            Command="{x:Bind ViewModel.Reload, Mode=OneWay}" />
+                </StackPanel>
+            </Border>
+
+            <!-- Nothing has ever been recorded. -->
+            <Border x:Name="EmptyState" Style="{StaticResource Card}"
+                    Visibility="Collapsed" VerticalAlignment="Top" HorizontalAlignment="Left">
+                <StackPanel Spacing="{StaticResource SpaceSm}">
+                    <TextBlock Text="No events yet" Style="{StaticResource TitleSm}" />
+                    <TextBlock Style="{StaticResource BodySm}" MaxWidth="520" HorizontalAlignment="Left"
+                               Text="Starting or stopping the tunnel records what the service did. That record is what to send to support if something goes wrong." />
+                    <Button Style="{StaticResource SecondaryButton}"
+                            Content="Go to Status"
+                            HorizontalAlignment="Left"
+                            Click="OnGoToStatus" />
+                </StackPanel>
+            </Border>
+
+            <!-- Events exist, none match this filter. A different screen and a
+                 different action from the one above. -->
+            <Border x:Name="FilteredState" Style="{StaticResource Card}"
+                    Visibility="Collapsed" VerticalAlignment="Top" HorizontalAlignment="Left">
+                <StackPanel Spacing="{StaticResource SpaceSm}">
+                    <TextBlock Text="No events of this kind" Style="{StaticResource TitleSm}" />
+                    <TextBlock Style="{StaticResource BodySm}" MaxWidth="520" HorizontalAlignment="Left"
+                               Text="There are events recorded, but none in the category selected above." />
+                    <Button Style="{StaticResource SecondaryButton}"
+                            Content="Show everything"
+                            HorizontalAlignment="Left"
+                            Click="OnClearFilter" />
+                </StackPanel>
+            </Border>
+
+            <Grid x:Name="ListState" Visibility="Collapsed" RowSpacing="{StaticResource SpaceXs}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <!-- Focusable, so the list is reachable and scrollable from
+                     the keyboard even though its rows are not controls. -->
+                <ScrollViewer Grid.Row="0"
+                              IsTabStop="True"
+                              VerticalScrollBarVisibility="Auto"
+                              AutomationProperties.Name="Control-plane events">
+                    <muxc:ItemsRepeater ItemsSource="{x:Bind Rows, Mode=OneWay}">
+                        <muxc:ItemsRepeater.Layout>
+                            <muxc:StackLayout Spacing="{StaticResource SpaceMd}" />
+                        </muxc:ItemsRepeater.Layout>
+                        <muxc:ItemsRepeater.ItemTemplate>
+                            <DataTemplate x:DataType="presentation:EventRow">
+                                <Grid ColumnSpacing="{StaticResource SpaceMd}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="88" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock Grid.Column="0"
+                                               Text="{x:Bind Timestamp}"
+                                               Style="{StaticResource MonoText}"
+                                               Foreground="{ThemeResource TextSecondary}"
+                                               VerticalAlignment="Top" />
+
+                                    <TextBlock Grid.Column="1"
+                                               Text="{x:Bind Kind}"
+                                               Style="{StaticResource BodySm}"
+                                               Foreground="{ThemeResource TextSecondary}"
+                                               VerticalAlignment="Top" />
+
+                                    <StackPanel Grid.Column="2" Spacing="{StaticResource SpaceXxs}">
+                                        <TextBlock Text="{x:Bind Summary}" Style="{StaticResource BodySm}" />
+                                        <TextBlock Text="{x:Bind NextStep}"
+                                                   Style="{StaticResource BodySm}"
+                                                   Foreground="{ThemeResource DangerText}"
+                                                   Visibility="{x:Bind HasNextStep, Converter={StaticResource Visible}}" />
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </muxc:ItemsRepeater.ItemTemplate>
+                    </muxc:ItemsRepeater>
+                </ScrollViewer>
+
+                <!-- Shown only when the window is genuinely full, so it never
+                     claims a truncation that did not happen. -->
+                <TextBlock x:Name="PartialNote"
+                           Grid.Row="1"
+                           Style="{StaticResource CaptionText}"
+                           Visibility="Collapsed"
+                           TextWrapping="Wrap"
+                           Text="Showing the most recent 200 events. Neither this app nor the control channel keeps more than that." />
+            </Grid>
+        </Grid>
+    </Grid>
+</Page>

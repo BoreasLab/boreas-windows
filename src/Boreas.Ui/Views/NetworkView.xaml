@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    One column, labels above fields, sections with headings, messages beside
+    the field that caused them.
+
+    Nothing here is disabled while the tunnel runs. A change that cannot take
+    effect until a restart is accepted and then said so, which is a better
+    answer than a greyed-out field that explains nothing.
+-->
+<Page
+    x:Class="Boreas.Ui.Views.NetworkView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Boreas.Ui.Controls"
+    Background="Transparent">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,4,0">
+        <StackPanel Spacing="{StaticResource SpaceXl}" MaxWidth="640" HorizontalAlignment="Left">
+
+            <StackPanel Spacing="{StaticResource SpaceXs}">
+                <TextBlock Text="Network" Style="{StaticResource DisplaySm}" />
+                <TextBlock Style="{StaticResource BodyMd}" MaxWidth="560" HorizontalAlignment="Left"
+                           Text="How the Boreas adapter appears to Windows. The service checks every value before it uses any of it." />
+            </StackPanel>
+
+            <!-- =============================== ADAPTER =============================== -->
+            <StackPanel Spacing="{StaticResource SpaceLg}">
+                <TextBlock Text="Adapter" Style="{StaticResource TitleMd}" />
+
+                <StackPanel>
+                    <TextBlock x:Name="AdapterLabel" Text="Name" Style="{StaticResource FieldLabel}" />
+                    <TextBox x:Name="AdapterInput"
+                             Style="{StaticResource FieldInput}"
+                             Text="{x:Bind ViewModel.AdapterName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             LostFocus="OnAdapterBlur"
+                             AutomationProperties.LabeledBy="{x:Bind AdapterLabel}" />
+                    <TextBlock Style="{StaticResource FieldHint}"
+                               Text="Shown in Windows network settings and in ipconfig." />
+                    <TextBlock Style="{StaticResource FieldError}"
+                               Text="{x:Bind ViewModel.AdapterError, Mode=OneWay}"
+                               Visibility="{x:Bind ViewModel.HasAdapterError, Mode=OneWay, Converter={StaticResource Visible}}" />
+                </StackPanel>
+
+                <StackPanel>
+                    <TextBlock x:Name="AddressLabel" Text="Address inside the tunnel" Style="{StaticResource FieldLabel}" />
+                    <TextBox x:Name="AddressInput"
+                             Style="{StaticResource FieldInputMono}"
+                             Text="{x:Bind ViewModel.InterfaceAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             LostFocus="OnAddressBlur"
+                             AutomationProperties.LabeledBy="{x:Bind AddressLabel}" />
+                    <TextBlock Style="{StaticResource FieldHint}"
+                               Text="An IPv4 or IPv6 address with its prefix length, for example 10.7.0.2/24." />
+                    <TextBlock Style="{StaticResource FieldError}"
+                               Text="{x:Bind ViewModel.AddressError, Mode=OneWay}"
+                               Visibility="{x:Bind ViewModel.HasAddressError, Mode=OneWay, Converter={StaticResource Visible}}" />
+                </StackPanel>
+
+                <StackPanel>
+                    <TextBlock x:Name="MtuLabel" Text="Packet size" Style="{StaticResource FieldLabel}" />
+                    <TextBox x:Name="MtuInput"
+                             Style="{StaticResource FieldInputMono}"
+                             MaxWidth="140"
+                             InputScope="Number"
+                             Text="{x:Bind ViewModel.Mtu, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             LostFocus="OnMtuBlur"
+                             AutomationProperties.LabeledBy="{x:Bind MtuLabel}" />
+                    <TextBlock Style="{StaticResource FieldHint}"
+                               Text="The largest packet the tunnel carries, in bytes. Lower it if connections stall on networks that fragment." />
+                    <TextBlock Style="{StaticResource FieldError}"
+                               Text="{x:Bind ViewModel.MtuError, Mode=OneWay}"
+                               Visibility="{x:Bind ViewModel.HasMtuError, Mode=OneWay, Converter={StaticResource Visible}}" />
+                </StackPanel>
+
+                <StackPanel>
+                    <TextBlock x:Name="DnsLabel" Text="DNS servers" Style="{StaticResource FieldLabel}" />
+                    <TextBox x:Name="DnsInput"
+                             Style="{StaticResource FieldInputMono}"
+                             Text="{x:Bind ViewModel.DnsServers, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             LostFocus="OnDnsBlur"
+                             AutomationProperties.LabeledBy="{x:Bind DnsLabel}" />
+                    <TextBlock Style="{StaticResource FieldHint}"
+                               Text="Optional. Separate several with commas or spaces. Leave this empty to keep the DNS servers Windows already uses." />
+                    <TextBlock Style="{StaticResource FieldError}"
+                               Text="{x:Bind ViewModel.DnsError, Mode=OneWay}"
+                               Visibility="{x:Bind ViewModel.HasDnsError, Mode=OneWay, Converter={StaticResource Visible}}" />
+                </StackPanel>
+            </StackPanel>
+
+            <Border Style="{StaticResource Divider}" />
+
+            <!-- =============================== ROUTING =============================== -->
+            <StackPanel Spacing="{StaticResource SpaceLg}">
+                <TextBlock Text="Routing" Style="{StaticResource TitleMd}" />
+
+                <RadioButtons Header="What goes through Boreas"
+                              SelectedIndex="{x:Bind ViewModel.RouteIndex, Mode=TwoWay}">
+                    <RadioButton Content="Everything from this device" />
+                    <RadioButton Content="Only the destinations Boreas is configured for" />
+                </RadioButtons>
+
+                <RadioButtons Header="How Boreas reaches the network"
+                              SelectedIndex="{x:Bind ViewModel.EgressIndex, Mode=TwoWay}">
+                    <RadioButton Content="Directly" />
+                    <RadioButton Content="Through a relay" />
+                </RadioButtons>
+            </StackPanel>
+
+            <Border Style="{StaticResource Divider}" />
+
+            <!-- ================================ APPLY ================================
+                 The result appears here, next to the button that caused it. A
+                 toast in the corner is a message about this form that someone
+                 reading this form will not see. -->
+            <StackPanel Spacing="{StaticResource SpaceMd}">
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpaceSm}">
+                    <Button x:Name="ApplyButton" Style="{StaticResource PrimaryButton}" Click="OnApply">
+                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpaceXs}">
+                            <ProgressRing Style="{StaticResource InlinePending}"
+                                          IsActive="{x:Bind ViewModel.Apply.IsRunning, Mode=OneWay}"
+                                          VerticalAlignment="Center" />
+                            <TextBlock Text="Save changes" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button Style="{StaticResource SecondaryButton}"
+                            Content="Discard changes"
+                            Command="{x:Bind ViewModel.Revert, Mode=OneWay}" />
+                </StackPanel>
+
+                <controls:Banner x:Name="OutcomeBanner" Visibility="Collapsed" />
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

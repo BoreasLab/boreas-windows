@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    A persistent, page-level notice with at most one action.
+
+    Not a toast. Everything this carries is something the user has to act on
+    or must not miss, which is exactly what a corner notification that fades
+    after four seconds is worst at. It stays until the condition it describes
+    stops being true.
+
+    It is a polite live region: a control channel dropping is worth
+    announcing, and is not worth interrupting whatever is being read.
+-->
+<UserControl
+    x:Class="Boreas.Ui.Controls.Banner"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Boreas.Ui.Controls"
+    AutomationProperties.LiveSetting="Polite">
+
+    <Border Style="{StaticResource OutlinedCard}"
+            Padding="{StaticResource PadCard}">
+        <Grid ColumnSpacing="{StaticResource SpaceMd}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <controls:StatusMark Grid.Column="0"
+                                 Tone="{x:Bind Tone, Mode=OneWay}"
+                                 Glyph="{x:Bind Glyph, Mode=OneWay}"
+                                 Diameter="24"
+                                 GlyphSize="20"
+                                 VerticalAlignment="Top" />
+
+            <StackPanel Grid.Column="1" Spacing="{StaticResource SpaceXxs}">
+                <TextBlock Text="{x:Bind Title, Mode=OneWay}"
+                           Style="{StaticResource TitleSm}"
+                           TextWrapping="Wrap" />
+                <TextBlock Text="{x:Bind Message, Mode=OneWay}"
+                           Style="{StaticResource BodySm}"
+                           MaxWidth="620"
+                           HorizontalAlignment="Left" />
+            </StackPanel>
+
+            <Button x:Name="Action"
+                    Grid.Column="2"
+                    Style="{StaticResource SecondaryButton}"
+                    Content="{x:Bind ActionLabel, Mode=OneWay}"
+                    Command="{x:Bind ActionCommand, Mode=OneWay}"
+                    Visibility="{x:Bind ActionVisibility, Mode=OneWay}"
+                    VerticalAlignment="Top" />
+        </Grid>
+    </Border>
+</UserControl>

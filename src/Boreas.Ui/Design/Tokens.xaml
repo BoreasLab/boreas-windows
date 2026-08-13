@@ -1,0 +1,426 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The token layer. Every colour, size, space and radius in this application
+    is named here and nowhere else. A component that needs a value it cannot
+    find here needs a new token, not a literal.
+
+    Colour sources
+    ==============
+    Roles are mapped from the supplied ramps. The mapping is a decision and it
+    is written down here so it is not re-made per component.
+
+      space-indigo   ink, text, neutral surfaces, dark product surface, idle
+      light-bronze   the single accent: action, selection, focus
+      beige          canvas, cream cards, and the caution tone
+      prussian-blue  the active tone only, at small saturated scale
+      dusty-rose     danger and the fault tone
+
+    Status tones are named for the tone, not for a state, because two states
+    can share one. They are deliberately not the accent: "the tunnel is up"
+    must never look like "press this".
+
+    Contrast, measured against composited values, not estimated:
+
+      AccentFill light  #9f512d + AccentOn #f8f9ec ......... 5.35:1
+      AccentFill dark   #d28460 + AccentOn #090d1b ......... 6.64:1
+      TextPrimary light #19254d on canvas #f8f9ec ......... 13.98:1
+      TextSecondary lt  #263773 on card   #f2f3d8 .......... 9.91:1
+      TextSecondary dk  #b3bee6 on card   #0d1226 ......... 10.10:1
+      ControlBorder lt  #667ccc on canvas #f8f9ec ........... 3.71:1
+      ControlBorder lt  #667ccc on card   #f2f3d8 ........... 3.49:1
+      ControlBorder dk  #667ccc on canvas #090d1b ........... 4.90:1
+      FocusRing light   #9f512d on canvas #f8f9ec ........... 5.35:1
+      FocusRing dark    #d28460 on canvas #090d1b ........... 6.64:1
+      StatusActive     #7366ff on band   #0d1226 ........... 4.48:1
+      StatusCaution     #d8da8b on band   #0d1226 .......... 12.66:1
+      StatusIdle        #8c9dd9 on band   #0d1226 ........... 7.02:1
+      StatusFault      #d19495 on band   #0d1226 ........... 7.41:1
+
+    light-bronze-600 on beige-200 is 4.44:1, so SurfaceSunken is a track and a
+    hairline ground only. It never carries text.
+
+    Accessibility values live in the skill's a11y reference. The ratios above
+    are measurements of these tokens, not a restatement of the thresholds.
+-->
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <ResourceDictionary.ThemeDictionaries>
+
+        <!-- ============================ LIGHT ============================ -->
+        <ResourceDictionary x:Key="Light">
+
+            <!-- Surfaces. Elevation in light runs one step darker than the
+                 canvas, following the supplied document's cream-card logic. -->
+            <SolidColorBrush x:Key="SurfaceCanvas"   Color="#f8f9ec" />
+            <SolidColorBrush x:Key="SurfaceCard"     Color="#f2f3d8" />
+            <SolidColorBrush x:Key="SurfaceSunken"   Color="#e5e7b1" />
+
+            <!-- The product band. Dark in both themes: it is the one surface
+                 that always shows service state, and holding it steady keeps
+                 the state reading identical whichever theme is active. -->
+            <SolidColorBrush x:Key="SurfaceBand"     Color="#090d1b" />
+            <SolidColorBrush x:Key="SurfaceBandRaised" Color="#19254d" />
+
+            <!-- The band's own foregrounds. Identical in light and dark
+                 because the band itself is, and only theme-dependent so that
+                 forced colours can still override them. -->
+            <SolidColorBrush x:Key="BandInk"         Color="#f8f9ec" />
+            <SolidColorBrush x:Key="BandInkSoft"     Color="#b3bee6" />
+            <SolidColorBrush x:Key="BandHairline"    Color="#19254d" />
+
+            <!-- Text -->
+            <SolidColorBrush x:Key="TextPrimary"     Color="#090d1b" />
+            <SolidColorBrush x:Key="TextBody"        Color="#19254d" />
+            <SolidColorBrush x:Key="TextSecondary"   Color="#263773" />
+            <SolidColorBrush x:Key="TextDisabled"    Color="#8c9dd9" />
+
+            <!-- Accent. One colour means action, selection and focus. -->
+            <SolidColorBrush x:Key="AccentFill"      Color="#9f512d" />
+            <SolidColorBrush x:Key="AccentFillPressed" Color="#773d22" />
+            <SolidColorBrush x:Key="AccentOn"        Color="#f8f9ec" />
+            <SolidColorBrush x:Key="AccentText"      Color="#9f512d" />
+            <SolidColorBrush x:Key="FocusRing"       Color="#9f512d" />
+
+            <!-- Lines. ControlBorder identifies where a control begins and is
+                 measured; Hairline separates same-elevation surfaces and is
+                 decoration. -->
+            <SolidColorBrush x:Key="ControlBorder"   Color="#667ccc" />
+            <SolidColorBrush x:Key="Hairline"        Color="#e5e7b1" />
+
+            <!-- Danger. Never the accent, or a destructive action stops
+                 reading as destructive. -->
+            <SolidColorBrush x:Key="DangerFill"      Color="#8f3d3f" />
+            <SolidColorBrush x:Key="DangerText"      Color="#6b2e2f" />
+            <SolidColorBrush x:Key="DangerOn"        Color="#f8f9ec" />
+            <SolidColorBrush x:Key="DangerSurface"   Color="#f0dbdc" />
+
+            <!-- Status tones on cream. Distinct from the accent so that
+                 "the tunnel is up" never looks like "press this". -->
+            <SolidColorBrush x:Key="StatusActive"   Color="#0d0099" />
+            <SolidColorBrush x:Key="StatusCaution"   Color="#4c4e18" />
+            <SolidColorBrush x:Key="StatusIdle"      Color="#263773" />
+            <SolidColorBrush x:Key="StatusFault"    Color="#6b2e2f" />
+
+            <!-- Press and pointer overlays. One template drives every button
+                 variant, so the press feedback is a tint over whatever the
+                 variant's own fill is. In light the tint is ink, which darkens
+                 the accent on press exactly as the supplied document asks. -->
+            <SolidColorBrush x:Key="OverlayHover"    Color="#14090d1b" />
+            <SolidColorBrush x:Key="OverlayPress"    Color="#26090d1b" />
+
+            <!-- The keyboard focus indicator, in the accent, at both tones the
+                 platform's two-line focus visual draws. -->
+            <SolidColorBrush x:Key="FocusVisualPrimaryBrush"   Color="#9f512d" />
+            <SolidColorBrush x:Key="FocusVisualSecondaryBrush" Color="#f8f9ec" />
+
+            <!-- Aliases onto the platform's own control resources, so a stock
+                 TextBox, NavigationView or InfoBar is painted from these
+                 tokens instead of the system palette. Aliases rather than
+                 copies: there is still exactly one definition per role. -->
+            <StaticResource x:Key="TextControlBackground"                     ResourceKey="SurfaceCanvas" />
+            <StaticResource x:Key="TextControlBackgroundPointerOver"          ResourceKey="SurfaceCanvas" />
+            <StaticResource x:Key="TextControlBackgroundFocused"              ResourceKey="SurfaceCanvas" />
+            <StaticResource x:Key="TextControlBackgroundDisabled"             ResourceKey="SurfaceSunken" />
+            <StaticResource x:Key="TextControlBorderBrush"                    ResourceKey="ControlBorder" />
+            <StaticResource x:Key="TextControlBorderBrushPointerOver"         ResourceKey="ControlBorder" />
+            <StaticResource x:Key="TextControlBorderBrushFocused"             ResourceKey="AccentFill" />
+            <StaticResource x:Key="TextControlBorderBrushDisabled"            ResourceKey="Hairline" />
+            <StaticResource x:Key="TextControlForeground"                     ResourceKey="TextPrimary" />
+            <StaticResource x:Key="TextControlForegroundPointerOver"          ResourceKey="TextPrimary" />
+            <StaticResource x:Key="TextControlForegroundFocused"              ResourceKey="TextPrimary" />
+            <StaticResource x:Key="TextControlForegroundDisabled"             ResourceKey="TextDisabled" />
+            <StaticResource x:Key="TextControlPlaceholderForeground"          ResourceKey="TextSecondary" />
+            <StaticResource x:Key="TextControlPlaceholderForegroundPointerOver" ResourceKey="TextSecondary" />
+            <StaticResource x:Key="TextControlPlaceholderForegroundFocused"   ResourceKey="TextSecondary" />
+            <StaticResource x:Key="TextControlHeaderForeground"               ResourceKey="TextBody" />
+            <StaticResource x:Key="TextControlHeaderForegroundDisabled"       ResourceKey="TextDisabled" />
+
+            <StaticResource x:Key="AccentFillColorDefaultBrush"               ResourceKey="AccentFill" />
+            <StaticResource x:Key="AccentFillColorSecondaryBrush"             ResourceKey="AccentFill" />
+            <StaticResource x:Key="AccentFillColorTertiaryBrush"              ResourceKey="AccentFill" />
+            <StaticResource x:Key="TextOnAccentFillColorPrimaryBrush"         ResourceKey="AccentOn" />
+            <StaticResource x:Key="TextOnAccentFillColorSecondaryBrush"       ResourceKey="AccentOn" />
+
+            <StaticResource x:Key="TextFillColorPrimaryBrush"                 ResourceKey="TextPrimary" />
+            <StaticResource x:Key="TextFillColorSecondaryBrush"               ResourceKey="TextBody" />
+            <StaticResource x:Key="TextFillColorTertiaryBrush"                ResourceKey="TextSecondary" />
+            <StaticResource x:Key="TextFillColorDisabledBrush"                ResourceKey="TextDisabled" />
+
+            <StaticResource x:Key="ApplicationPageBackgroundThemeBrush"       ResourceKey="SurfaceCanvas" />
+            <StaticResource x:Key="NavigationViewContentBackground"           ResourceKey="SurfaceCanvas" />
+            <StaticResource x:Key="NavigationViewDefaultPaneBackground"       ResourceKey="SurfaceCard" />
+            <StaticResource x:Key="NavigationViewExpandedPaneBackground"      ResourceKey="SurfaceCard" />
+            <StaticResource x:Key="NavigationViewItemForeground"              ResourceKey="TextBody" />
+            <StaticResource x:Key="NavigationViewItemForegroundSelected"      ResourceKey="TextPrimary" />
+            <StaticResource x:Key="NavigationViewSelectionIndicatorForeground" ResourceKey="AccentFill" />
+
+            <StaticResource x:Key="ControlStrongStrokeColorDefaultBrush"      ResourceKey="ControlBorder" />
+            <StaticResource x:Key="CardStrokeColorDefaultBrush"               ResourceKey="Hairline" />
+            <StaticResource x:Key="DividerStrokeColorDefaultBrush"            ResourceKey="Hairline" />
+        </ResourceDictionary>
+
+        <!-- ============================= DARK ============================= -->
+        <ResourceDictionary x:Key="Dark">
+
+            <SolidColorBrush x:Key="SurfaceCanvas"   Color="#090d1b" />
+            <SolidColorBrush x:Key="SurfaceCard"     Color="#0d1226" />
+            <SolidColorBrush x:Key="SurfaceSunken"   Color="#19254d" />
+
+            <!-- The band lifts rather than drops, because elevation reverses
+                 in dark. It stays the same family so the state reads the
+                 same in both themes. -->
+            <SolidColorBrush x:Key="SurfaceBand"     Color="#0d1226" />
+            <SolidColorBrush x:Key="SurfaceBandRaised" Color="#19254d" />
+
+            <!-- The band's own foregrounds. Identical in light and dark
+                 because the band itself is, and only theme-dependent so that
+                 forced colours can still override them. -->
+            <SolidColorBrush x:Key="BandInk"         Color="#f8f9ec" />
+            <SolidColorBrush x:Key="BandInkSoft"     Color="#b3bee6" />
+            <SolidColorBrush x:Key="BandHairline"    Color="#19254d" />
+
+            <SolidColorBrush x:Key="TextPrimary"     Color="#f8f9ec" />
+            <SolidColorBrush x:Key="TextBody"        Color="#d9def2" />
+            <SolidColorBrush x:Key="TextSecondary"   Color="#b3bee6" />
+            <SolidColorBrush x:Key="TextDisabled"    Color="#334999" />
+
+            <!-- Accent lightens and desaturates in dark rather than reusing
+                 the light value, which would vibrate against near-black. -->
+            <SolidColorBrush x:Key="AccentFill"      Color="#d28460" />
+            <SolidColorBrush x:Key="AccentFillPressed" Color="#e9c2af" />
+            <SolidColorBrush x:Key="AccentOn"        Color="#090d1b" />
+            <SolidColorBrush x:Key="AccentText"      Color="#d28460" />
+            <SolidColorBrush x:Key="FocusRing"       Color="#d28460" />
+
+            <SolidColorBrush x:Key="ControlBorder"   Color="#667ccc" />
+            <SolidColorBrush x:Key="Hairline"        Color="#19254d" />
+
+            <SolidColorBrush x:Key="DangerFill"      Color="#d19495" />
+            <SolidColorBrush x:Key="DangerText"      Color="#d19495" />
+            <SolidColorBrush x:Key="DangerOn"        Color="#090d1b" />
+            <SolidColorBrush x:Key="DangerSurface"   Color="#240f10" />
+
+            <SolidColorBrush x:Key="StatusActive"   Color="#7366ff" />
+            <SolidColorBrush x:Key="StatusCaution"   Color="#d8da8b" />
+            <SolidColorBrush x:Key="StatusIdle"      Color="#8c9dd9" />
+            <SolidColorBrush x:Key="StatusFault"    Color="#d19495" />
+
+            <!-- In dark the tint is the canvas cream, so the accent lightens
+                 on press. Darkening it here would push the ink label on the
+                 accent fill toward its own colour. -->
+            <SolidColorBrush x:Key="OverlayHover"    Color="#14f8f9ec" />
+            <SolidColorBrush x:Key="OverlayPress"    Color="#26f8f9ec" />
+
+            <SolidColorBrush x:Key="FocusVisualPrimaryBrush"   Color="#d28460" />
+            <SolidColorBrush x:Key="FocusVisualSecondaryBrush" Color="#090d1b" />
+
+            <!-- Aliases onto the platform's own control resources, so a stock
+                 TextBox, NavigationView or InfoBar is painted from these
+                 tokens instead of the system palette. Aliases rather than
+                 copies: there is still exactly one definition per role. -->
+            <StaticResource x:Key="TextControlBackground"                     ResourceKey="SurfaceCanvas" />
+            <StaticResource x:Key="TextControlBackgroundPointerOver"          ResourceKey="SurfaceCanvas" />
+            <StaticResource x:Key="TextControlBackgroundFocused"              ResourceKey="SurfaceCanvas" />
+            <StaticResource x:Key="TextControlBackgroundDisabled"             ResourceKey="SurfaceSunken" />
+            <StaticResource x:Key="TextControlBorderBrush"                    ResourceKey="ControlBorder" />
+            <StaticResource x:Key="TextControlBorderBrushPointerOver"         ResourceKey="ControlBorder" />
+            <StaticResource x:Key="TextControlBorderBrushFocused"             ResourceKey="AccentFill" />
+            <StaticResource x:Key="TextControlBorderBrushDisabled"            ResourceKey="Hairline" />
+            <StaticResource x:Key="TextControlForeground"                     ResourceKey="TextPrimary" />
+            <StaticResource x:Key="TextControlForegroundPointerOver"          ResourceKey="TextPrimary" />
+            <StaticResource x:Key="TextControlForegroundFocused"              ResourceKey="TextPrimary" />
+            <StaticResource x:Key="TextControlForegroundDisabled"             ResourceKey="TextDisabled" />
+            <StaticResource x:Key="TextControlPlaceholderForeground"          ResourceKey="TextSecondary" />
+            <StaticResource x:Key="TextControlPlaceholderForegroundPointerOver" ResourceKey="TextSecondary" />
+            <StaticResource x:Key="TextControlPlaceholderForegroundFocused"   ResourceKey="TextSecondary" />
+            <StaticResource x:Key="TextControlHeaderForeground"               ResourceKey="TextBody" />
+            <StaticResource x:Key="TextControlHeaderForegroundDisabled"       ResourceKey="TextDisabled" />
+
+            <StaticResource x:Key="AccentFillColorDefaultBrush"               ResourceKey="AccentFill" />
+            <StaticResource x:Key="AccentFillColorSecondaryBrush"             ResourceKey="AccentFill" />
+            <StaticResource x:Key="AccentFillColorTertiaryBrush"              ResourceKey="AccentFill" />
+            <StaticResource x:Key="TextOnAccentFillColorPrimaryBrush"         ResourceKey="AccentOn" />
+            <StaticResource x:Key="TextOnAccentFillColorSecondaryBrush"       ResourceKey="AccentOn" />
+
+            <StaticResource x:Key="TextFillColorPrimaryBrush"                 ResourceKey="TextPrimary" />
+            <StaticResource x:Key="TextFillColorSecondaryBrush"               ResourceKey="TextBody" />
+            <StaticResource x:Key="TextFillColorTertiaryBrush"                ResourceKey="TextSecondary" />
+            <StaticResource x:Key="TextFillColorDisabledBrush"                ResourceKey="TextDisabled" />
+
+            <StaticResource x:Key="ApplicationPageBackgroundThemeBrush"       ResourceKey="SurfaceCanvas" />
+            <StaticResource x:Key="NavigationViewContentBackground"           ResourceKey="SurfaceCanvas" />
+            <StaticResource x:Key="NavigationViewDefaultPaneBackground"       ResourceKey="SurfaceCard" />
+            <StaticResource x:Key="NavigationViewExpandedPaneBackground"      ResourceKey="SurfaceCard" />
+            <StaticResource x:Key="NavigationViewItemForeground"              ResourceKey="TextBody" />
+            <StaticResource x:Key="NavigationViewItemForegroundSelected"      ResourceKey="TextPrimary" />
+            <StaticResource x:Key="NavigationViewSelectionIndicatorForeground" ResourceKey="AccentFill" />
+
+            <StaticResource x:Key="ControlStrongStrokeColorDefaultBrush"      ResourceKey="ControlBorder" />
+            <StaticResource x:Key="CardStrokeColorDefaultBrush"               ResourceKey="Hairline" />
+            <StaticResource x:Key="DividerStrokeColorDefaultBrush"            ResourceKey="Hairline" />
+        </ResourceDictionary>
+
+        <!-- ========================= HIGH CONTRAST ========================
+             Forced colours win outright. Every role defers to the system
+             pair the user selected, so the interface keeps working rather
+             than keeping its palette. -->
+        <ResourceDictionary x:Key="HighContrast">
+
+            <SolidColorBrush x:Key="SurfaceCanvas"   Color="{ThemeResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="SurfaceCard"     Color="{ThemeResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="SurfaceSunken"   Color="{ThemeResource SystemColorButtonFaceColor}" />
+            <SolidColorBrush x:Key="SurfaceBand"     Color="{ThemeResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="SurfaceBandRaised" Color="{ThemeResource SystemColorButtonFaceColor}" />
+
+            <SolidColorBrush x:Key="TextPrimary"     Color="{ThemeResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="TextBody"        Color="{ThemeResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="TextSecondary"   Color="{ThemeResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="TextDisabled"    Color="{ThemeResource SystemColorGrayTextColor}" />
+
+            <SolidColorBrush x:Key="AccentFill"      Color="{ThemeResource SystemColorHighlightColor}" />
+            <SolidColorBrush x:Key="AccentFillPressed" Color="{ThemeResource SystemColorHighlightColor}" />
+            <SolidColorBrush x:Key="AccentOn"        Color="{ThemeResource SystemColorHighlightTextColor}" />
+            <SolidColorBrush x:Key="AccentText"      Color="{ThemeResource SystemColorHotlightColor}" />
+            <SolidColorBrush x:Key="FocusRing"       Color="{ThemeResource SystemColorWindowTextColor}" />
+
+            <SolidColorBrush x:Key="ControlBorder"   Color="{ThemeResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="Hairline"        Color="{ThemeResource SystemColorWindowTextColor}" />
+
+            <!-- The band's own foregrounds. Identical in light and dark
+                 because the band itself is, and only theme-dependent so that
+                 forced colours can still override them. -->
+            <StaticResource x:Key="BandInk"      ResourceKey="TextPrimary" />
+            <StaticResource x:Key="BandInkSoft"  ResourceKey="TextSecondary" />
+            <StaticResource x:Key="BandHairline" ResourceKey="Hairline" />
+
+            <SolidColorBrush x:Key="DangerFill"      Color="{ThemeResource SystemColorHighlightColor}" />
+            <SolidColorBrush x:Key="DangerText"      Color="{ThemeResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="DangerOn"        Color="{ThemeResource SystemColorHighlightTextColor}" />
+            <SolidColorBrush x:Key="DangerSurface"   Color="{ThemeResource SystemColorWindowColor}" />
+
+            <!-- Status colour carries no information on its own anywhere in
+                 this application; the word and the glyph carry it. Under
+                 forced colours every tone collapses to window text and the
+                 state stays fully readable. -->
+            <SolidColorBrush x:Key="StatusActive"   Color="{ThemeResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="StatusCaution"   Color="{ThemeResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="StatusIdle"      Color="{ThemeResource SystemColorGrayTextColor}" />
+            <SolidColorBrush x:Key="StatusFault"    Color="{ThemeResource SystemColorWindowTextColor}" />
+
+            <!-- No tinting under forced colours. The system pair is the whole
+                 point, and an alpha overlay would break it. -->
+            <SolidColorBrush x:Key="OverlayHover"    Color="Transparent" />
+            <SolidColorBrush x:Key="OverlayPress"    Color="Transparent" />
+
+            <SolidColorBrush x:Key="FocusVisualPrimaryBrush"   Color="{ThemeResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="FocusVisualSecondaryBrush" Color="{ThemeResource SystemColorWindowColor}" />
+
+            <!-- Aliases onto the platform's own control resources, so a stock
+                 TextBox, NavigationView or InfoBar is painted from these
+                 tokens instead of the system palette. Aliases rather than
+                 copies: there is still exactly one definition per role. -->
+            <StaticResource x:Key="TextControlBackground"                     ResourceKey="SurfaceCanvas" />
+            <StaticResource x:Key="TextControlBackgroundPointerOver"          ResourceKey="SurfaceCanvas" />
+            <StaticResource x:Key="TextControlBackgroundFocused"              ResourceKey="SurfaceCanvas" />
+            <StaticResource x:Key="TextControlBackgroundDisabled"             ResourceKey="SurfaceSunken" />
+            <StaticResource x:Key="TextControlBorderBrush"                    ResourceKey="ControlBorder" />
+            <StaticResource x:Key="TextControlBorderBrushPointerOver"         ResourceKey="ControlBorder" />
+            <StaticResource x:Key="TextControlBorderBrushFocused"             ResourceKey="AccentFill" />
+            <StaticResource x:Key="TextControlBorderBrushDisabled"            ResourceKey="Hairline" />
+            <StaticResource x:Key="TextControlForeground"                     ResourceKey="TextPrimary" />
+            <StaticResource x:Key="TextControlForegroundPointerOver"          ResourceKey="TextPrimary" />
+            <StaticResource x:Key="TextControlForegroundFocused"              ResourceKey="TextPrimary" />
+            <StaticResource x:Key="TextControlForegroundDisabled"             ResourceKey="TextDisabled" />
+            <StaticResource x:Key="TextControlPlaceholderForeground"          ResourceKey="TextSecondary" />
+            <StaticResource x:Key="TextControlPlaceholderForegroundPointerOver" ResourceKey="TextSecondary" />
+            <StaticResource x:Key="TextControlPlaceholderForegroundFocused"   ResourceKey="TextSecondary" />
+            <StaticResource x:Key="TextControlHeaderForeground"               ResourceKey="TextBody" />
+            <StaticResource x:Key="TextControlHeaderForegroundDisabled"       ResourceKey="TextDisabled" />
+
+            <StaticResource x:Key="AccentFillColorDefaultBrush"               ResourceKey="AccentFill" />
+            <StaticResource x:Key="AccentFillColorSecondaryBrush"             ResourceKey="AccentFill" />
+            <StaticResource x:Key="AccentFillColorTertiaryBrush"              ResourceKey="AccentFill" />
+            <StaticResource x:Key="TextOnAccentFillColorPrimaryBrush"         ResourceKey="AccentOn" />
+            <StaticResource x:Key="TextOnAccentFillColorSecondaryBrush"       ResourceKey="AccentOn" />
+
+            <StaticResource x:Key="TextFillColorPrimaryBrush"                 ResourceKey="TextPrimary" />
+            <StaticResource x:Key="TextFillColorSecondaryBrush"               ResourceKey="TextBody" />
+            <StaticResource x:Key="TextFillColorTertiaryBrush"                ResourceKey="TextSecondary" />
+            <StaticResource x:Key="TextFillColorDisabledBrush"                ResourceKey="TextDisabled" />
+
+            <StaticResource x:Key="ApplicationPageBackgroundThemeBrush"       ResourceKey="SurfaceCanvas" />
+            <StaticResource x:Key="NavigationViewContentBackground"           ResourceKey="SurfaceCanvas" />
+            <StaticResource x:Key="NavigationViewDefaultPaneBackground"       ResourceKey="SurfaceCard" />
+            <StaticResource x:Key="NavigationViewExpandedPaneBackground"      ResourceKey="SurfaceCard" />
+            <StaticResource x:Key="NavigationViewItemForeground"              ResourceKey="TextBody" />
+            <StaticResource x:Key="NavigationViewItemForegroundSelected"      ResourceKey="TextPrimary" />
+            <StaticResource x:Key="NavigationViewSelectionIndicatorForeground" ResourceKey="AccentFill" />
+
+            <StaticResource x:Key="ControlStrongStrokeColorDefaultBrush"      ResourceKey="ControlBorder" />
+            <StaticResource x:Key="CardStrokeColorDefaultBrush"               ResourceKey="Hairline" />
+            <StaticResource x:Key="DividerStrokeColorDefaultBrush"            ResourceKey="Hairline" />
+        </ResourceDictionary>
+
+    </ResourceDictionary.ThemeDictionaries>
+
+    <!-- ============================ TYPE SCALE ============================
+         Steps are the supplied document's. The two largest steps carry the
+         serif; everything else is the platform's humanist sans, which is
+         also what every other Windows application uses for chrome.
+
+         Sitka is a Windows-shipped optical-size serif designed for screen
+         reading, and is the honest substitute for the document's licensed
+         Copernicus. Cascadia Mono ships with Windows 11; Consolas is the
+         fallback for Windows 10. Nothing here downloads a font.
+
+         The document's 64px and 48px steps and its 96px section rhythm are
+         a marketing rhythm and are unused on this surface. -->
+
+    <FontFamily x:Key="FontDisplay">Sitka Display, Sitka Text, Georgia, serif</FontFamily>
+    <FontFamily x:Key="FontText">Segoe UI Variable Text, Segoe UI Variable, Segoe UI</FontFamily>
+    <FontFamily x:Key="FontMono">Cascadia Mono, Consolas, Courier New</FontFamily>
+
+    <x:Double x:Key="TypeDisplayMd">36</x:Double>
+    <x:Double x:Key="TypeDisplaySm">28</x:Double>
+    <x:Double x:Key="TypeTitleLg">22</x:Double>
+    <x:Double x:Key="TypeTitleMd">18</x:Double>
+    <x:Double x:Key="TypeTitleSm">16</x:Double>
+    <x:Double x:Key="TypeBodyMd">16</x:Double>
+    <x:Double x:Key="TypeBodySm">14</x:Double>
+    <x:Double x:Key="TypeCaption">13</x:Double>
+    <x:Double x:Key="TypeCaptionUpper">12</x:Double>
+    <x:Double x:Key="TypeCode">14</x:Double>
+
+    <!-- ========================== SPACING SCALE ========================== -->
+    <x:Double x:Key="SpaceXxs">4</x:Double>
+    <x:Double x:Key="SpaceXs">8</x:Double>
+    <x:Double x:Key="SpaceSm">12</x:Double>
+    <x:Double x:Key="SpaceMd">16</x:Double>
+    <x:Double x:Key="SpaceLg">24</x:Double>
+    <x:Double x:Key="SpaceXl">32</x:Double>
+    <x:Double x:Key="SpaceXxl">48</x:Double>
+
+    <Thickness x:Key="PadCard">24</Thickness>
+    <Thickness x:Key="PadBand">32</Thickness>
+    <Thickness x:Key="PadView">32,24,32,32</Thickness>
+    <Thickness x:Key="PadControl">14,8,14,8</Thickness>
+    <Thickness x:Key="PadPill">12,4,12,4</Thickness>
+
+    <!-- =========================== RADIUS SCALE =========================== -->
+    <CornerRadius x:Key="RadiusXs">4</CornerRadius>
+    <CornerRadius x:Key="RadiusSm">6</CornerRadius>
+    <CornerRadius x:Key="RadiusMd">8</CornerRadius>
+    <CornerRadius x:Key="RadiusLg">12</CornerRadius>
+    <CornerRadius x:Key="RadiusXl">16</CornerRadius>
+    <CornerRadius x:Key="RadiusPill">999</CornerRadius>
+
+    <!-- ============================== MOTION ==============================
+         One curve family. Durations are short because this is a control
+         surface someone opens every day, not a page they scroll once.
+         App.MotionEnabled gates all of it on the system animation setting. -->
+    <x:Double x:Key="DurationFastMs">120</x:Double>
+    <x:Double x:Key="DurationBaseMs">180</x:Double>
+
+</ResourceDictionary>

@@ -1,0 +1,17 @@
+<Project>
+
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+
+  <!-- Floating versions are deliberate and temporary. W0 replaces each of
+       these with an exact pin plus a lock file, after the license,
+       maintenance, release and transitive-graph review that AGENTS.md
+       requires. Do not ship a release candidate against a floating range. -->
+  <ItemGroup>
+    <PackageVersion Include="Microsoft.WindowsAppSDK" Version="1.7.*" />
+    <PackageVersion Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.*" />
+  </ItemGroup>
+
+</Project>

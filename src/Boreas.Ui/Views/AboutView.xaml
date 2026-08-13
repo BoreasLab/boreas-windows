@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    What is installed, and what it is allowed to do. The second half is here
+    because a tool that reroutes every packet a device sends should be able to
+    say plainly what it does and does not touch.
+
+    Every version number is read at runtime. Nothing on this page is typed in.
+-->
+<Page
+    x:Class="Boreas.Ui.Views.AboutView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="Transparent">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,4,0">
+        <StackPanel Spacing="{StaticResource SpaceXl}" MaxWidth="640" HorizontalAlignment="Left">
+
+            <StackPanel Spacing="{StaticResource SpaceXs}">
+                <TextBlock Text="About" Style="{StaticResource DisplaySm}" />
+                <TextBlock Style="{StaticResource BodyMd}" MaxWidth="560" HorizontalAlignment="Left"
+                           Text="Boreas is a Windows service that carries this device's traffic, and this window is the control surface for it." />
+            </StackPanel>
+
+            <Border Style="{StaticResource Card}">
+                <StackPanel Spacing="{StaticResource SpaceMd}">
+                    <StackPanel Spacing="{StaticResource SpaceXxs}">
+                        <TextBlock Text="This app" Style="{StaticResource CaptionText}" />
+                        <TextBlock x:Name="AppVersion" Style="{StaticResource MonoText}" />
+                    </StackPanel>
+
+                    <StackPanel Spacing="{StaticResource SpaceXxs}">
+                        <TextBlock Text="Control protocol" Style="{StaticResource CaptionText}" />
+                        <TextBlock x:Name="ProtocolVersion" Style="{StaticResource MonoText}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <StackPanel Spacing="{StaticResource SpaceMd}">
+                <TextBlock Text="What this window can and cannot do" Style="{StaticResource TitleMd}" />
+
+                <TextBlock Style="{StaticResource BodyMd}" MaxWidth="560" HorizontalAlignment="Left"
+                           Text="It runs as an ordinary account with no extra privileges. It asks the Boreas service to start and stop, and it shows what the service reports back." />
+
+                <TextBlock Style="{StaticResource BodyMd}" MaxWidth="560" HorizontalAlignment="Left"
+                           Text="It never sees the traffic itself. Packets go from the network adapter straight into the Boreas engine inside the service, and the channel between this window and the service carries commands and status only." />
+
+                <TextBlock Style="{StaticResource BodyMd}" MaxWidth="560" HorizontalAlignment="Left"
+                           Text="Closing this window does not stop the tunnel, and neither does signing out. Only stopping it here, or stopping the Windows service, does that." />
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

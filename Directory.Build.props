@@ -1,0 +1,21 @@
+<Project>
+
+  <PropertyGroup>
+    <!-- W0 pins the .NET SDK, Windows App SDK and target platform versions.
+         The values below are working defaults, not the pinned inputs, and have
+         not been resolved against a Windows machine from this repository. -->
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- CS8509 and CS8524 are the switch-exhaustiveness diagnostics. They are
+         errors so that adding a service state, channel state or collection
+         state fails the build at every site that must handle it. -->
+    <WarningsAsErrors>$(WarningsAsErrors);CS8509;CS8524</WarningsAsErrors>
+  </PropertyGroup>
+
+</Project>

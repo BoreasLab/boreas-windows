@@ -8,6 +8,7 @@ need a coordinated `boreas-core` change.
 |---|---|
 | [Core Contract](core-contract.md) | shared responsibilities, service/control interface, packet boundary and lifecycle ordering |
 | [Platform Integration](platform-integration.md) | WinUI 3, native service host, Wintun, named-pipe security and bypass glue |
+| [UI Design](ui-design.md) | the control client's tokens, screens, state presentation and interaction rules |
 | [Implementation Plan](implementation-plan.md) | work order, acceptance gates and Windows test matrix |
 | [Verified Inputs](verified-inputs.md) | fact-checked platform inputs, source links, and unresolved decisions |
 

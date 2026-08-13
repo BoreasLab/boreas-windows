@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    One question, answered in one glance: is my traffic going through Boreas.
+
+    Composition, top to bottom:
+      the dark band     state, in a word, with the one action that applies
+      inside the band   the session, so the answer and its evidence read as
+                        one object rather than two regions to reconcile
+      on the canvas     what is true about the tunnel but is not its state:
+                        a degraded bypass, and a way to ask again
+
+    The band is dark in both themes. It is the product surface the supplied
+    document reserves for real product chrome, and holding it steady means the
+    state reads identically whichever theme someone runs.
+-->
+<Page
+    x:Class="Boreas.Ui.Views.StatusView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:muxc="using:Microsoft.UI.Xaml.Controls"
+    xmlns:controls="using:Boreas.Ui.Controls"
+    xmlns:presentation="using:Boreas.Ui.Presentation"
+    Background="Transparent">
+
+    <Page.Resources>
+        <!-- One template for a label over its value, used by both lists.
+             Declared once here rather than twice inline. -->
+        <DataTemplate x:Key="BandFact" x:DataType="presentation:LabelledValue">
+            <StackPanel Spacing="{StaticResource SpaceXxs}" MinWidth="150">
+                <TextBlock Text="{x:Bind Label}" Style="{StaticResource BandCaption}" />
+                <TextBlock Text="{x:Bind Value}" Style="{StaticResource BandMono}" />
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate x:Key="BandCounter" x:DataType="presentation:LabelledValue">
+            <StackPanel Spacing="{StaticResource SpaceXxs}" MinWidth="150">
+                <TextBlock Text="{x:Bind Label}" Style="{StaticResource BandCaption}" />
+                <TextBlock Text="{x:Bind Value}"
+                           Style="{StaticResource BandMono}"
+                           FontSize="{StaticResource TypeTitleLg}" />
+            </StackPanel>
+        </DataTemplate>
+    </Page.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,4,0">
+        <StackPanel Spacing="{StaticResource SpaceMd}" MaxWidth="880" HorizontalAlignment="Stretch">
+
+            <!-- ============================ THE BAND ============================ -->
+            <Border Style="{StaticResource Band}">
+                <StackPanel Spacing="{StaticResource SpaceLg}">
+
+                    <!-- Announced politely, because a state change the user did
+                         not cause still has to reach someone who is not
+                         looking at the window. -->
+                    <Grid ColumnSpacing="{StaticResource SpaceLg}"
+                          AutomationProperties.LiveSetting="Polite"
+                          AutomationProperties.Name="{x:Bind ViewModel.Presentation.Announcement, Mode=OneWay}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <controls:StatusMark Grid.Column="0"
+                                             Tone="{x:Bind ViewModel.Presentation.Tone, Mode=OneWay}"
+                                             Glyph="{x:Bind ViewModel.Presentation.Glyph, Mode=OneWay}"
+                                             IsBusy="{x:Bind ViewModel.Presentation.ShowProgress, Mode=OneWay}"
+                                             Diameter="56"
+                                             GlyphSize="24"
+                                             RingThickness="2"
+                                             VerticalAlignment="Top" />
+
+                        <StackPanel Grid.Column="1" Spacing="{StaticResource SpaceXs}">
+                            <TextBlock Text="{x:Bind ViewModel.Presentation.Headline, Mode=OneWay}"
+                                       Style="{StaticResource BandDisplay}" />
+                            <TextBlock Text="{x:Bind ViewModel.Presentation.Detail, Mode=OneWay}"
+                                       Style="{StaticResource BandBody}"
+                                       MaxWidth="440"
+                                       HorizontalAlignment="Left" />
+                        </StackPanel>
+
+                        <!-- The one action, where the state is. Its label is a
+                             verb naming what will happen, so the button reads
+                             correctly whether or not the words beside it do. -->
+                        <Button Grid.Column="2"
+                                x:Name="PrimaryAction"
+                                Style="{StaticResource PrimaryButton}"
+                                Command="{x:Bind ViewModel.Primary, Mode=OneWay}"
+                                Visibility="{x:Bind ViewModel.HasPrimaryAction, Mode=OneWay, Converter={StaticResource Visible}}"
+                                VerticalAlignment="Top">
+                            <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpaceXs}">
+                                <!-- Laid out whether or not it spins, so a press
+                                     never resizes the button and never replaces
+                                     its label with a spinner. -->
+                                <ProgressRing Style="{StaticResource InlinePending}"
+                                              IsActive="{x:Bind ViewModel.Primary.IsRunning, Mode=OneWay}"
+                                              VerticalAlignment="Center" />
+                                <TextBlock Text="{x:Bind ViewModel.PrimaryLabel, Mode=OneWay}"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+
+                    <!-- ==================== SESSION, INSIDE THE BAND ==================== -->
+                    <StackPanel Spacing="{StaticResource SpaceLg}"
+                                Visibility="{x:Bind ViewModel.HasFacts, Mode=OneWay, Converter={StaticResource Visible}}">
+
+                        <Border Height="1" Background="{ThemeResource BandHairline}" />
+
+                        <StackPanel Spacing="{StaticResource SpaceSm}">
+                            <TextBlock Text="{x:Bind ViewModel.Facts.RunningSince, Mode=OneWay}"
+                                       Style="{StaticResource BandCaption}" />
+
+                            <muxc:ItemsRepeater ItemsSource="{x:Bind ViewModel.Facts.Identity, Mode=OneWay}"
+                                                ItemTemplate="{StaticResource BandFact}">
+                                <muxc:ItemsRepeater.Layout>
+                                    <!-- Re-flows to fewer columns in a narrow
+                                         window instead of clipping or scrolling
+                                         sideways. -->
+                                    <muxc:UniformGridLayout MinItemWidth="150"
+                                                            MinColumnSpacing="{StaticResource SpaceXl}"
+                                                            MinRowSpacing="{StaticResource SpaceMd}"
+                                                            ItemsStretch="Fill" />
+                                </muxc:ItemsRepeater.Layout>
+                            </muxc:ItemsRepeater>
+                        </StackPanel>
+
+                        <StackPanel Spacing="{StaticResource SpaceSm}">
+                            <TextBlock Text="Since this session started"
+                                       Style="{StaticResource BandCaption}" />
+
+                            <muxc:ItemsRepeater ItemsSource="{x:Bind ViewModel.Facts.Counters, Mode=OneWay}"
+                                                ItemTemplate="{StaticResource BandCounter}">
+                                <muxc:ItemsRepeater.Layout>
+                                    <muxc:UniformGridLayout MinItemWidth="150"
+                                                            MinColumnSpacing="{StaticResource SpaceXl}"
+                                                            MinRowSpacing="{StaticResource SpaceMd}"
+                                                            ItemsStretch="Fill" />
+                                </muxc:ItemsRepeater.Layout>
+                            </muxc:ItemsRepeater>
+                        </StackPanel>
+
+                        <StackPanel Spacing="{StaticResource SpaceXxs}">
+                            <TextBlock Text="Session" Style="{StaticResource BandCaption}" />
+                            <TextBlock Text="{x:Bind ViewModel.Facts.SessionId, Mode=OneWay}"
+                                       Style="{StaticResource BandMono}" />
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- ========================== BYPASS DEGRADED ==========================
+                 Separate from the band, because it is a different claim: the
+                 tunnel is up and Boreas cannot keep its own upstream socket
+                 outside it. -->
+            <controls:Banner x:Name="BypassBanner"
+                             Visibility="Collapsed"
+                             Tone="Caution" />
+
+            <!-- For the case where a pushed update was missed. Quiet, because
+                 it is not what anyone opened this window to press. -->
+            <Button Style="{StaticResource QuietButton}"
+                    Command="{x:Bind ViewModel.Refresh, Mode=OneWay}"
+                    HorizontalAlignment="Left">
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpaceXs}">
+                    <ProgressRing Style="{StaticResource InlinePendingOnCanvas}"
+                                  IsActive="{x:Bind ViewModel.Refresh.IsRunning, Mode=OneWay}"
+                                  VerticalAlignment="Center" />
+                    <TextBlock Text="Ask the service again" VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
+        </StackPanel>
+    </ScrollViewer>
+</Page>
