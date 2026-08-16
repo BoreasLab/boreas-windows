@@ -19,28 +19,22 @@ public sealed partial class MainWindow : Window
 
         _viewModel = App.Shell;
 
-        // A named handler, not a lambda, because it has to come off again and
-        // an anonymous delegate cannot be removed. The shell outlives this
-        // window, so a subscription left behind keeps the window alive with it.
+        // Use a named handler so it can be removed when the shell outlives the
+        // window.
         _viewModel.PropertyChanged += OnShellPropertyChanged;
 
         Title = "Boreas";
 
-        // A branded canvas rather than Mica. Mica tints from whatever is on
-        // the desktop behind the window, which would make the canvas colour
-        // indeterminate, and the canvas is the one surface every measured
-        // contrast pairing in Tokens.xaml is measured against.
+        // Use a stable branded canvas; Mica would make measured contrast
+        // depend on the desktop behind the window.
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(TitleBar);
         TitleBar.SizeChanged += (_, _) => ReserveCaptionSpace();
 
         SampleMarker.Visibility = _viewModel.UsingSampleData ? Visibility.Visible : Visibility.Collapsed;
 
-        // Nothing sets Shell.RequestedTheme, here or anywhere, on purpose.
-        // Left at ElementTheme.Default the tree resolves its ThemeResource
-        // lookups against the system's setting and re-resolves them when that
-        // setting changes, so the window follows Windows at runtime with no
-        // appearance state of its own to hold, persist, or leave stale.
+        // Leave RequestedTheme at Default so the window follows Windows without
+        // storing a separate appearance state.
 
         ReserveCaptionSpace();
         RenderChannel();
@@ -54,9 +48,7 @@ public sealed partial class MainWindow : Window
     public ShellViewModel ViewModel => _viewModel;
 
     /// <summary>
-    /// The one place this process shuts down. Every subscription taken in the
-    /// constructor is released here, and then the application releases the
-    /// channel and the shell that own the resources behind them.
+    /// Removes window subscriptions before releasing application resources.
     /// </summary>
     private void OnClosed(object sender, WindowEventArgs args)
     {
@@ -70,9 +62,7 @@ public sealed partial class MainWindow : Window
     private void OnShellPropertyChanged(object? sender, PropertyChangedEventArgs args) => RenderChannel();
 
     /// <summary>
-    /// Keeps the chip clear of the minimise, maximise and close buttons at
-    /// every scale factor, rather than guessing a pixel width that is wrong
-    /// on a high-DPI display or when a language reverses the layout.
+    /// Reserves caption-button space at the current scale factor.
     /// </summary>
     private void ReserveCaptionSpace()
     {
@@ -104,8 +94,7 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Moves the pane selection too, so the highlighted entry and the page on
-    /// screen never disagree about where the user is.
+    /// Keeps pane selection aligned with the requested page.
     /// </summary>
     private void OnNavigationRequested(object? sender, NavigationSection section)
     {

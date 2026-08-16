@@ -9,10 +9,8 @@ namespace Boreas.Ui.Presentation;
 /// Control-plane history: transitions, commands, channel changes, failures.
 /// </summary>
 /// <remarks>
-/// Not a log viewer. The pipe carries no arbitrary log stream, so this shows
-/// the bounded event record and nothing else. "Copy for support" produces the
-/// same text a person would otherwise transcribe by hand, which is the whole
-/// reason it exists.
+/// This is a bounded control-plane record, not an arbitrary service log.
+/// Support copy preserves the rows and technical details shown here.
 /// </remarks>
 public sealed class DiagnosticsViewModel : ObservableObject, IDisposable
 {
@@ -56,17 +54,8 @@ public sealed class DiagnosticsViewModel : ObservableObject, IDisposable
     ];
 
     /// <summary>
-    /// The filter as the segmented control indexes it.
+    /// The filter index used by the segmented control.
     /// </summary>
-    /// <remarks>
-    /// One array read in both directions. The switch out and the switch back it
-    /// replaces were two statements of one order, kept in agreement by nothing
-    /// but attention, and the getter threw on a value the setter would happily
-    /// have produced. A round trip through one array cannot disagree with
-    /// itself, and <c>PresentationLaws</c> asserts the array names every kind,
-    /// which is what rules out the -1 <see cref="Array.IndexOf{T}(T[], T)"/>
-    /// would otherwise return.
-    /// </remarks>
     public int FilterIndex
     {
         get => Array.IndexOf(FilterOrder, Filter);
@@ -78,14 +67,11 @@ public sealed class DiagnosticsViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// The list, projected once per change.
+    /// The projected list, cached until state changes.
     /// </summary>
     /// <remarks>
-    /// Filtering and projecting is O(n) in the event window, and the view
-    /// reads this several times per render: once to choose which of the six
-    /// regions is visible, once for the repeater, and again on every binding
-    /// refresh. Recomputing per read made a render O(kn) and allocated a fresh
-    /// row for every event each time. Now it is O(n) per change.
+    /// The view reads this several times per render, so project once per
+    /// change rather than allocate rows on every binding read.
     /// </remarks>
     public CollectionState<EventRow> Events => _events ??= Project();
 
@@ -111,8 +97,7 @@ public sealed class DiagnosticsViewModel : ObservableObject, IDisposable
             return new CollectionState<EventRow>.Filtered(ClearFilter);
         }
 
-        // The service bounds its subscription; this window is what the client
-        // keeps. Saying so beats silently showing a truncated list.
+        // A full client window is partial, not silently presented as complete.
         return matching.Length >= ControlProtocol.EventWindow
             ? new CollectionState<EventRow>.Partial(matching, LoadOlder)
             : new CollectionState<EventRow>.Ready(matching);
@@ -162,9 +147,7 @@ public sealed class DiagnosticsViewModel : ObservableObject, IDisposable
 
     private void LoadOlder()
     {
-        // The client holds one bounded window and the service does not serve
-        // history beyond it, so there is nothing older to fetch. Refreshing is
-        // the honest behaviour behind this affordance.
+        // No older history exists; refresh the bounded window instead.
         _ = Reload.ExecuteAsync(CancellationToken.None);
     }
 
@@ -178,8 +161,7 @@ public sealed class DiagnosticsViewModel : ObservableObject, IDisposable
 }
 
 /// <summary>
-/// One event, formatted for display, with no nullable path for a template to
-/// navigate and no UI type on a contract record.
+/// One event formatted for display without UI types in the contract record.
 /// </summary>
 public sealed record EventRow(
     Guid Id,
@@ -190,8 +172,7 @@ public sealed record EventRow(
     ImmutableArray<string> SupportLines)
 {
     /// <summary>
-    /// Derived, not stored. A stored flag alongside the text it describes is
-    /// a second copy of the same fact, and the two can be set out of step.
+    /// Derived from <see cref="NextStep"/> to avoid duplicate state.
     /// </summary>
     public bool HasNextStep => NextStep.Length > 0;
 
@@ -214,9 +195,7 @@ public sealed record EventRow(
             Kind: Describe(source.Kind),
             Summary: source.Summary,
             NextStep: source.Error?.NextStep ?? string.Empty,
-            // Accumulated locally, frozen on the way out: the list never
-            // escapes, so the record holds a value rather than a handle to
-            // something someone else could still be writing.
+            // Freeze support lines before exposing the row.
             SupportLines: [.. lines]);
     }
 

@@ -1,2 +1,2 @@
-// One place for the ambient namespaces every test file uses.
+// Shared namespaces for test files.
 global using Xunit;

@@ -4,14 +4,10 @@ namespace Boreas.Ui.Contracts;
 /// The service state model from docs/platform-integration.md, closed.
 /// </summary>
 /// <remarks>
-/// Only the service drives transitions. The client renders what it is given
-/// and never derives state from button state, process liveness, or how long a
-/// command has been outstanding.
-///
-/// The private constructor plus nested cases makes the hierarchy genuinely
-/// closed: no other assembly and no other file can add a case. Adding one here
-/// changes <see cref="Match"/>'s signature, which fails the build at every
-/// site that renders a state.
+/// Only the service drives transitions; the client never infers state from UI
+/// state, process liveness, or command duration. The private constructor keeps
+/// cases closed, so adding one requires every <see cref="Match"/> caller to
+/// handle it.
 /// </remarks>
 public abstract record ServiceState
 {

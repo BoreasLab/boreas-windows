@@ -9,19 +9,10 @@ namespace Boreas.Ui.Contracts;
 /// The refined values a validated configuration is built from.
 /// </summary>
 /// <remarks>
-/// Each type here has a private constructor and one <c>TryParse</c>. There is
-/// no other way to make one, so holding an <see cref="AdapterName"/> is proof
-/// that the text was non-empty, and holding a <see cref="PacketSize"/> is
-/// proof that the number is one a link can actually carry. The check happens
-/// once, at the boundary, and every function downstream is total.
-///
-/// Each type also owns the sentence shown when parsing fails. That keeps the
-/// rule and its explanation in one place: previously the view model restated
-/// both, and the two could drift.
-///
-/// These are records rather than structs on purpose. A struct is always
-/// default-constructible, so <c>default(PacketSize)</c> would be a zero-byte
-/// packet size that never passed a check. A record class cannot be forged.
+/// Private constructors and <c>TryParse</c> keep validation at the boundary;
+/// each value therefore proves that its own rule passed. Records avoid the
+/// invalid default values a struct would permit, and each type owns its error
+/// message so validation and guidance cannot drift.
 /// </remarks>
 public sealed record AdapterName
 {
@@ -66,10 +57,7 @@ public sealed record TunnelAddress
             return null;
         }
 
-        // The list pattern is the specification: CIDR is exactly two parts,
-        // and saying so in the pattern is what makes the rest of this total.
-        // A span slice around IndexOf would save two small allocations on a
-        // path that handles a text box, and would state the arity nowhere.
+        // The list pattern makes CIDR's exactly-two-part shape explicit.
         if (text.Split('/', StringSplitOptions.TrimEntries) is not [var host, var prefix]
             || !IPAddress.TryParse(host, out var address))
         {
@@ -111,18 +99,8 @@ public sealed record PacketSize
     /// Digits, and nothing else.
     /// </summary>
     /// <remarks>
-    /// This field used to accept grouping separators, which meant a bespoke
-    /// scanner and an ambiguity: "1.4.2.0" and "abc1420" both read as 1420.
-    /// That liberality was never earned. The domain is four digits between
-    /// 1280 and 9000, nobody groups a number that size, and no supported
-    /// spelling of an MTU contains anything but digits. Constraining the
-    /// format is what makes the parser one total expression instead of a loop
-    /// with a separator table, and the field's own requirement sentence is
-    /// what tells the user so.
-    ///
-    /// DNS keeps its liberal split, because there people genuinely paste lists
-    /// in several spellings and no canonical one exists. That is the test:
-    /// real variance in what users have, not variance the parser invented.
+    /// Unlike DNS, MTU has one canonical spelling, so accepting separators
+    /// would add ambiguity without accommodating real input.
     /// </remarks>
     public static PacketSize? TryParse(string? raw) =>
         int.TryParse(raw.AsSpan().Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out var value)
@@ -152,12 +130,8 @@ public sealed record DnsServers
     public ImmutableArray<IPAddress> Value { get; }
 
     /// <summary>
-    /// The one liberal parse in this file, and the only one with evidence
-    /// behind it: DNS servers get pasted from provider pages, ipconfig output
-    /// and other config files, and those genuinely differ in separator. There
-    /// is no canonical spelling to constrain the field to, so the field absorbs
-    /// the variance. Contrast <see cref="PacketSize"/>, which has one spelling
-    /// and therefore one parse.
+    /// Accepts common separators because DNS lists have no single pasted
+    /// spelling; unlike <see cref="PacketSize"/>, this variance is real.
     /// </summary>
     public static DnsServers? TryParse(string? raw)
     {
@@ -186,11 +160,8 @@ public sealed record DnsServers
     /// Structural, written out rather than synthesized.
     /// </summary>
     /// <remarks>
-    /// <see cref="ImmutableArray{T}"/> is a struct wrapping an array, and its
-    /// own equality compares that array by reference. A record containing one
-    /// therefore inherits reference equality, so two configurations naming the
-    /// same servers would compare unequal and every round-trip law over this
-    /// type would be false. Comparing the elements is what the type means.
+    /// <see cref="ImmutableArray{T}"/> compares its backing array by reference,
+    /// so records need element equality to compare server lists by value.
     /// </remarks>
     public bool Equals(DnsServers? other) =>
         other is not null && Value.SequenceEqual(other.Value);

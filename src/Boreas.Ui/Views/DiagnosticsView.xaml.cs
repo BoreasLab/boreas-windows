@@ -37,15 +37,12 @@ public sealed partial class DiagnosticsView : Page
     public DiagnosticsViewModel ViewModel { get; }
 
     /// <summary>
-    /// The rows the list binds to. Empty in every state that has no rows, so
-    /// the repeater is never handed a collection it has to interpret.
+    /// Rows for the list; empty whenever the state has no rows.
     /// </summary>
     public IReadOnlyList<EventRow> Rows => ViewModel.Events.ItemsOrEmpty;
 
     /// <summary>
-    /// Exactly one region is shown, chosen by eliminating the closed
-    /// collection state. Adding a seventh case would fail to compile here
-    /// rather than silently rendering an empty page.
+    /// Shows exactly one region for the closed collection state.
     /// </summary>
     private void RenderState()
     {
@@ -80,8 +77,7 @@ public sealed partial class DiagnosticsView : Page
         package.SetText(ViewModel.ComposeSupportText());
         Clipboard.SetContent(package);
 
-        // Perceptible, then quiet. The label changes where the press happened
-        // and changes back on its own.
+        // Confirm the copy action where it was pressed, then reset it.
         CopyLabel.Text = "Copied";
         _copyReset.Start();
     }

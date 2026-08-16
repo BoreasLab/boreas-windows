@@ -4,8 +4,7 @@ using Boreas.Ui.Presentation;
 namespace Boreas.Ui.Tests;
 
 /// <summary>
-/// Laws of the network form: what it accepts, when it complains, and what it
-/// does with the service's answer.
+/// Laws for network-form parsing, validation, and service outcomes.
 /// </summary>
 public sealed class ConfigurationLaws
 {
@@ -17,18 +16,8 @@ public sealed class ConfigurationLaws
     }
 
     /// <summary>
-    /// A packet size is digits. Surrounding whitespace is an artefact of
-    /// pasting and is absorbed; nothing else is.
+    /// MTU accepts digits and surrounding whitespace, but no grouping.
     /// </summary>
-    /// <remarks>
-    /// This law used to admit "1,420" and "1 420" too, on a be-liberal
-    /// argument that did not survive being asked for evidence. Nobody groups a
-    /// four-digit MTU, so the liberality bought no real input and cost a
-    /// bespoke scanner plus an ambiguity, since discarding non-digits also read
-    /// "1.4.2.0" as 1420. Constraining the format is the cheaper half of
-    /// parse-do-not-validate: the easiest format to parse correctly is the one
-    /// with a single spelling.
-    /// </remarks>
     [Theory]
     [InlineData("1420")]
     [InlineData(" 1420 ")]
@@ -44,13 +33,11 @@ public sealed class ConfigurationLaws
 
         await model.Apply.ExecuteAsync(CancellationToken.None);
 
-        // The service receives a parsed number, not a spelling of one.
         Assert.Equal(1420, channel.LastApplied!.PacketSize.Value);
     }
 
     /// <summary>
-    /// Separators are the user's choice and the system's problem. All of these
-    /// name the same two servers.
+    /// DNS accepts common separators because no canonical list spelling exists.
     /// </summary>
     [Theory]
     [InlineData("10.7.0.1, 10.7.0.2")]
@@ -73,11 +60,7 @@ public sealed class ConfigurationLaws
     }
 
     /// <summary>
-    /// Parsing is idempotent through the canonical rendering: parse, render,
-    /// parse again, and you land on the same value. This is the law that lets
-    /// the form round-trip a configuration through the service and back
-    /// without drifting, and it is stated once over the parser rather than
-    /// re-tested per field through the view model.
+    /// Parsing and canonical rendering are idempotent.
     /// </summary>
     [Theory]
     [InlineData("Boreas", "10.7.0.2/24", "1420", "10.7.0.1, 10.7.0.2")]
@@ -96,8 +79,7 @@ public sealed class ConfigurationLaws
     }
 
     /// <summary>
-    /// A refined value cannot be built from text that fails its rule, so the
-    /// only way to hold one is to have passed the check.
+    /// Refined values exist only after their rule passes.
     /// </summary>
     [Fact]
     public void A_refined_value_rejects_text_that_fails_its_rule()
@@ -115,9 +97,7 @@ public sealed class ConfigurationLaws
     }
 
     /// <summary>
-    /// Nothing is said about a field the user has not finished. Telling
-    /// somebody their half-typed address is invalid is noise they learn to
-    /// ignore, which costs the message that matters.
+    /// Untouched fields stay silent until blur.
     /// </summary>
     [Fact]
     public async Task An_untouched_field_stays_silent_while_it_is_being_typed()
@@ -132,8 +112,7 @@ public sealed class ConfigurationLaws
     }
 
     /// <summary>
-    /// Once a field has errored it revalidates live, so the message clears the
-    /// moment it stops being true rather than at the next submit.
+    /// An errored field clears as soon as its value becomes valid.
     /// </summary>
     [Fact]
     public async Task An_errored_field_clears_as_soon_as_it_becomes_valid()
@@ -179,8 +158,7 @@ public sealed class ConfigurationLaws
     }
 
     /// <summary>
-    /// An invalid form is never sent. The service would reject it, and the
-    /// round trip costs the user a wait to learn what the client already knew.
+    /// Invalid forms never reach the service.
     /// </summary>
     [Fact]
     public async Task An_invalid_form_is_not_sent()
@@ -197,9 +175,7 @@ public sealed class ConfigurationLaws
     }
 
     /// <summary>
-    /// A rejection keeps every typed value and places the service's message
-    /// beside the field that caused it. Losing a filled-in form to a rejection
-    /// is the most damaging thing a form can do.
+    /// Service rejection preserves typed values and maps messages to fields.
     /// </summary>
     [Fact]
     public async Task A_rejection_preserves_entry_and_places_each_message_at_its_field()
@@ -224,8 +200,7 @@ public sealed class ConfigurationLaws
     }
 
     /// <summary>
-    /// A rejection that names no field leaves every field message clear. The
-    /// banner still reports it; nothing is pinned to an arbitrary input.
+    /// Field-less rejection leaves field messages clear and uses the banner.
     /// </summary>
     [Fact]
     public async Task A_rejection_naming_no_field_leaves_the_fields_alone()
@@ -246,8 +221,7 @@ public sealed class ConfigurationLaws
     }
 
     /// <summary>
-    /// Each outcome says something different, because they mean different
-    /// things: in effect now, saved but waiting, or not saved at all.
+    /// Applied, restart-required, and rejected outcomes differ in message and tone.
     /// </summary>
     [Fact]
     public async Task Each_outcome_produces_its_own_message_and_tone()
@@ -266,7 +240,7 @@ public sealed class ConfigurationLaws
             message => Assert.False(string.IsNullOrWhiteSpace(message)));
     }
 
-    /// <summary>Discarding restores exactly what the service reported.</summary>
+    /// <summary>Discarding restores the service values and clears messages.</summary>
     [Fact]
     public async Task Discarding_restores_the_service_values_and_clears_every_message()
     {
@@ -283,7 +257,7 @@ public sealed class ConfigurationLaws
         Assert.Null(model.OutcomeMessage);
     }
 
-    /// <summary>The radio index maps both ways over the closed enum.</summary>
+    /// <summary>The route index round-trips over the closed enum.</summary>
     [Theory]
     [InlineData(RouteMode.Default, 0)]
     [InlineData(RouteMode.Selected, 1)]
@@ -298,7 +272,7 @@ public sealed class ConfigurationLaws
         Assert.Equal(mode, model.Routes);
     }
 
-    /// <summary>Empty DNS is a real answer: keep what Windows already has.</summary>
+    /// <summary>Empty DNS keeps Windows' existing servers.</summary>
     [Fact]
     public async Task Leaving_dns_empty_is_valid()
     {
@@ -315,8 +289,7 @@ public sealed class ConfigurationLaws
     [InlineData("9001")]
     [InlineData("")]
     [InlineData("abc")]
-    // Read as 1420 while non-digits were being discarded. Each is now a
-    // rejection with the field's requirement sentence beside it.
+    // Previously parsed as 1420 when non-digits were discarded.
     [InlineData("abc1420")]
     [InlineData("1.4.2.0")]
     [InlineData("1,420")]

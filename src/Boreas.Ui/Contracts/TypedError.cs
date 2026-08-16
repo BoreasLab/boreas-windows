@@ -17,13 +17,9 @@ namespace Boreas.Ui.Contracts;
 /// Secondary technical text. Kept available and kept out of the way.
 /// </param>
 /// <remarks>
-/// The service produces these. The client never composes an error message from
-/// an exception it caught, because a message assembled on this side would
-/// describe the client's confusion rather than the service's failure.
-///
-/// Nothing here may carry credentials, key material, packet payloads or
-/// unrestricted diagnostic text; docs/core-contract.md puts that constraint on
-/// the pipe, and this record is the shape that constraint has to hold for.
+/// The service produces these; the client does not turn local exceptions into
+/// service messages. They may contain no credentials, keys, packet payloads, or
+/// unrestricted diagnostic text.
 /// </remarks>
 public sealed record TypedError(
     string Code,

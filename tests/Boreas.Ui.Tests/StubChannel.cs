@@ -5,8 +5,7 @@ using Boreas.Ui.Services;
 namespace Boreas.Ui.Tests;
 
 /// <summary>
-/// A channel frozen at one state pair. Used where a law is about what the
-/// interface says, not about what the service does.
+/// A channel fixed at one state pair for presentation laws.
 /// </summary>
 public sealed class StubChannel(ControlChannelState channel, ServiceState state) : IControlChannel
 {
@@ -22,7 +21,7 @@ public sealed class StubChannel(ControlChannelState channel, ServiceState state)
         remove { }
     }
 
-    /// <summary>Nothing is opened, so nothing is closed.</summary>
+    /// <summary>No resources are opened.</summary>
     public void Dispose()
     {
     }
@@ -44,8 +43,7 @@ public sealed class StubChannel(ControlChannelState channel, ServiceState state)
 }
 
 /// <summary>
-/// A channel that records the draft it was handed and answers with a chosen
-/// outcome. Used to prove what the form sends and what it does with the reply.
+/// A channel that records submitted configuration and returns a chosen outcome.
 /// </summary>
 public sealed class RecordingChannel(ConfigurationOutcome outcome, ConfigurationDraft? initial = null)
     : IControlChannel
@@ -69,7 +67,7 @@ public sealed class RecordingChannel(ConfigurationOutcome outcome, Configuration
         remove { }
     }
 
-    /// <summary>Nothing is opened, so nothing is closed.</summary>
+    /// <summary>No resources are opened.</summary>
     public void Dispose()
     {
     }

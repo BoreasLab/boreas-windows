@@ -5,14 +5,9 @@ namespace Boreas.Ui.Contracts;
 /// service reported.
 /// </summary>
 /// <remarks>
-/// Deliberately all strings. This is the untrusted side of the boundary;
-/// <see cref="ConfigurationParser.Parse"/> turns it into a
-/// <see cref="ValidatedConfiguration"/>, and only that can be sent. The client
-/// parsing early is a courtesy that puts the message next to the field one
-/// round trip sooner. The service remains the authority.
-///
-/// Service account, packaging, pipe authorization policy and the Wintun binary
-/// are installation policy and are deliberately not editable here.
+/// Strings keep this side of the boundary untrusted; only
+/// <see cref="ValidatedConfiguration"/> crosses to the service. Installation
+/// policy, including account, pipe authorization, and Wintun, is not editable.
 /// </remarks>
 public sealed record ConfigurationDraft(
     string AdapterName,
@@ -43,9 +38,8 @@ public enum EgressPolicy
 /// What the service did with a <c>configuration_changed</c> request.
 /// </summary>
 /// <remarks>
-/// The contract forbids partial silent application, so there is no "mostly
-/// applied" case here. Either it took effect, or it needs a restart to take
-/// effect, or it was rejected and nothing changed.
+/// The contract allows only applied, restart-required, or rejected outcomes;
+/// partial silent application is not represented.
 /// </remarks>
 public abstract record ConfigurationOutcome
 {
@@ -54,21 +48,16 @@ public abstract record ConfigurationOutcome
     public sealed record Applied : ConfigurationOutcome;
 
     /// <summary>
-    /// Accepted and stored, but the running session keeps its old values until
-    /// it is restarted. The user is told which, and restarts when they choose.
+    /// Accepted and stored; the running session uses it after restart.
     /// </summary>
     public sealed record RestartRequired : ConfigurationOutcome;
 
     /// <summary>
-    /// Rejected at the trust boundary. <paramref name="FieldErrors"/> maps a
-    /// field to its message so the client can place each one beside its cause
-    /// instead of showing one banner for the whole form.
+    /// Rejected at the trust boundary, with messages keyed to their fields.
     /// </summary>
     /// <remarks>
-    /// Keyed by <see cref="ConfigField"/> rather than by a wire string. The
-    /// channel implementation translates the wire name once, when it decodes
-    /// the response, so nothing above it has to cope with a field name that
-    /// names no field.
+    /// The channel translates wire names once, so callers cannot receive an
+    /// error keyed to a field this client does not know.
     /// </remarks>
     public sealed record Rejected(
         TypedError Error,

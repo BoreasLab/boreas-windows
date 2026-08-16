@@ -36,7 +36,7 @@ public sealed partial class StatusMark : UserControl
         nameof(Surface), typeof(MarkSurface), typeof(StatusMark),
         new PropertyMetadata(MarkSurface.Canvas, OnVisualPropertyChanged));
 
-    /// <summary>The single axis of identity.</summary>
+    /// <summary>The mark's status tone.</summary>
     public StatusTone Tone
     {
         get => (StatusTone)GetValue(ToneProperty);
@@ -50,9 +50,7 @@ public sealed partial class StatusMark : UserControl
     }
 
     /// <summary>
-    /// Whether work is under way. Honoured only when the system allows
-    /// animation; the state itself is always readable from the words beside
-    /// the mark, so switching the spinner off removes motion, not meaning.
+    /// Whether work is under way; reduced motion hides movement, not state.
     /// </summary>
     public bool IsBusy
     {
@@ -79,8 +77,7 @@ public sealed partial class StatusMark : UserControl
     }
 
     /// <summary>
-    /// Which ground the mark sits on. The band is dark in both themes and the
-    /// canvas is not, so the two need different tone families to stay legible.
+    /// Surface beneath the mark; band and canvas use different tone families.
     /// </summary>
     public MarkSurface Surface
     {
@@ -95,13 +92,12 @@ public sealed partial class StatusMark : UserControl
     {
         VisualStateManager.GoToState(this, $"{Surface}{Tone}", useTransitions: false);
 
-        // Checked at the point of use, so turning animation off mid-session
-        // takes effect on the next state change rather than the next launch.
+        // Read at use time so a motion setting change takes effect immediately.
         var spin = IsBusy && App.MotionEnabled;
         Busy.Visibility = spin ? Visibility.Visible : Visibility.Collapsed;
         Busy.IsActive = spin;
 
-        // The glyph and the spinner occupy the same cell, so only one shows.
+        // Glyph and spinner share a cell; show only one.
         Mark.Visibility = spin ? Visibility.Collapsed : Visibility.Visible;
     }
 }

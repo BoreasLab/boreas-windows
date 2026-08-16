@@ -11,10 +11,8 @@ public sealed class StatusViewModel : ObservableObject, IDisposable
 {
     private readonly IControlChannel _channel;
 
-    // Derived values, cached for the lifetime of one channel state. Plain
-    // nullable fields rather than the `field` keyword: `field` is for a
-    // property that validates on assignment, and these have no setter to
-    // hang that on. Reaching for it here would be syntax for its own sake.
+    // Plain fields cache derived values; these properties have no setter for
+    // the C# 14 `field` keyword to support.
     private StatusPresentation? _presentation;
     private ChannelPresentation? _channelPresentation;
     private SessionFacts? _facts;
@@ -38,11 +36,8 @@ public sealed class StatusViewModel : ObservableObject, IDisposable
     /// memoized only for the lifetime of one channel state.
     /// </summary>
     /// <remarks>
-    /// The cache is cleared by the same handler that raises the change
-    /// notifications, so it cannot serve a stale value: there is no path that
-    /// updates the channel without invalidating this. What it buys is that a
-    /// screen with six bindings onto this property derives it once per change
-    /// rather than six times per render.
+    /// The change handler clears the cache before notifying bindings, so each
+    /// channel state is derived once without serving stale data.
     /// </remarks>
     public StatusPresentation Presentation =>
         _presentation ??= StatusPresentation.For(_channel.Channel, _channel.State);
@@ -51,16 +46,11 @@ public sealed class StatusViewModel : ObservableObject, IDisposable
         _channelPresentation ??= ChannelPresentation.For(_channel.Channel);
 
     /// <summary>
-    /// The label for the one prominent action, always a verb naming what will
-    /// happen.
+    /// Verb label for the primary action.
     /// </summary>
     /// <remarks>
-    /// Stop drops every connection running through the tunnel, so it is
-    /// destructive in one sense. It is still the accent button and it is
-    /// still unconfirmed, because it is undone by pressing start and it is
-    /// the expected action for as long as the tunnel is up. Spending the
-    /// danger colour and a confirmation on the most frequent press is how
-    /// people learn to dismiss the one confirmation that matters.
+    /// Stop is expected and reversible, so it does not use destructive styling
+    /// or confirmation.
     /// </remarks>
     public string PrimaryLabel => Presentation.Action switch
     {
@@ -75,10 +65,7 @@ public sealed class StatusViewModel : ObservableObject, IDisposable
     public bool HasPrimaryAction => Presentation.Action != PrimaryAction.None;
 
     /// <summary>
-    /// Session facts. Never null: <see cref="SessionFacts.None"/> stands in
-    /// while there is no session, so no binding has to survive a null path.
-    /// Building it allocates ten records, and four bindings read it, so it is
-    /// built once per change.
+    /// Session facts, with <see cref="SessionFacts.None"/> for no session.
     /// </summary>
     public SessionFacts Facts => _facts ??= _channel.Channel is ControlChannelState.Connected
         ? _channel.State.Match(
@@ -90,15 +77,13 @@ public sealed class StatusViewModel : ObservableObject, IDisposable
         : SessionFacts.None;
 
     /// <summary>
-    /// Asked of the state directly rather than by probing the facts for an
-    /// empty string. The state is what decides; the string was a proxy for it.
+    /// Whether the connected service reports a running session.
     /// </summary>
     public bool HasFacts =>
         _channel.Channel is ControlChannelState.Connected && _channel.State is ServiceState.Running;
 
     /// <summary>
-    /// The bypass warning, or null when there is nothing to warn about. It is
-    /// kept out of the band so the band answers exactly one question.
+    /// Bypass warning, kept separate from the primary status.
     /// </summary>
     public TypedError? BypassDegradation => _channel.State.Match(
         stopped: static _ => (TypedError?)null,
@@ -111,9 +96,7 @@ public sealed class StatusViewModel : ObservableObject, IDisposable
 
     private async Task InvokePrimaryAsync(CancellationToken cancellationToken)
     {
-        // Re-read the action at press time. The state may have changed between
-        // the last render and this press, and the service is the authority on
-        // what is valid now.
+        // Re-read at press time; the service state may have changed since render.
         switch (Presentation.Action)
         {
             case PrimaryAction.Start:
@@ -133,8 +116,7 @@ public sealed class StatusViewModel : ObservableObject, IDisposable
 
     private void OnChannelChanged(object? sender, EventArgs e)
     {
-        // Invalidated before notifying, so the first binding to read after the
-        // notification recomputes rather than seeing the previous value.
+        // Invalidate before notifying so bindings recompute current values.
         _presentation = null;
         _channelPresentation = null;
         _facts = null;
@@ -159,14 +141,8 @@ public sealed record LabelledValue(string Label, string Value);
 /// What a live session shows, already formatted.
 /// </summary>
 /// <remarks>
-/// Column choice is the design. Identity answers "is this the tunnel I think
-/// it is", and the counters answer "is anything actually moving". Everything
-/// else the snapshot carries stays in diagnostics.
-///
-/// Uptime is shown as the wall-clock time the session started rather than a
-/// counting-up duration. An absolute time is what someone reads out to
-/// support, and it does not need a timer running behind the window to stay
-/// truthful between status pushes.
+/// The status view shows identity, counters, and absolute start time; other
+/// snapshot fields stay in diagnostics.
 /// </remarks>
 public sealed record SessionFacts(
     string SessionId,
@@ -174,7 +150,7 @@ public sealed record SessionFacts(
     IReadOnlyList<LabelledValue> Identity,
     IReadOnlyList<LabelledValue> Counters)
 {
-    /// <summary>The stand-in for "there is no session", so nothing binds to null.</summary>
+    /// <summary>Empty session facts, so bindings never receive null.</summary>
     public static SessionFacts None { get; } = new(
         SessionId: string.Empty,
         RunningSince: string.Empty,
@@ -207,16 +183,8 @@ public sealed record SessionFacts(
     /// A byte count in the largest unit that leaves it above one.
     /// </summary>
     /// <remarks>
-    /// The unit is the value's magnitude in base 1024, which is its base-2
-    /// logarithm in groups of ten, so the hardware instruction behind
-    /// <see cref="BitOperations.Log2(ulong)"/> answers it outright and the
-    /// divide-until-small loop that used to compute it is gone.
-    /// <c>Log2(0)</c> is 0 by convention, which is the answer this wants: no
-    /// bytes are still bytes.
-    ///
-    /// Scaling by a shift rather than by repeated division keeps the result
-    /// identical rather than merely close: the divisor is a power of two, so
-    /// the quotient is exact in both spellings.
+    /// Base-1024 units use <see cref="BitOperations.Log2(ulong)"/>; zero maps
+    /// to bytes by convention, and powers of two make shift scaling exact.
     /// </remarks>
     private static string FormatBytes(ulong value)
     {

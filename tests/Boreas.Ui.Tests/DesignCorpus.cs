@@ -4,20 +4,11 @@ using System.Text.RegularExpressions;
 namespace Boreas.Ui.Tests;
 
 /// <summary>
-/// The XAML of the application, parsed once into a value the laws are total
-/// functions over.
+/// Application XAML parsed once for the design laws.
 /// </summary>
 /// <remarks>
-/// Parse, do not validate. Every design-system assertion in this suite reads
-/// this record and never touches the filesystem or a regex of its own, so a
-/// law is a pure predicate that can be reasoned about, and the cost of reading
-/// and scanning the corpus is paid exactly once per test run rather than once
-/// per assertion.
-///
-/// Cost: O(b) in the total bytes of the corpus to build, where b is a few tens
-/// of kilobytes across a dozen files. Every lookup afterwards is a hash probe,
-/// so the reference-resolution law is O(defs + refs) rather than the O(defs x
-/// refs) a scan-per-reference would cost.
+/// Laws read this value instead of touching the filesystem; parsing cost is
+/// paid once per test run.
 /// </remarks>
 public sealed record DesignCorpus(
     ImmutableArray<XamlFile> Files,
@@ -29,9 +20,7 @@ public sealed record DesignCorpus(
         ["Design/Tokens.xaml", "Design/Controls.xaml", "App.xaml"];
 
     /// <summary>
-    /// Keys the platform supplies. Anything not defined by this application
-    /// and not on this list is a typo, and a typo in a resource key is a
-    /// crash on Windows that no Linux compile would otherwise catch.
+    /// Platform-supplied keys excluded from unresolved-key failures.
     /// </summary>
     private static readonly Regex PlatformKey = new(@"^SystemColor\w+$", RegexOptions.Compiled);
 
@@ -94,8 +83,7 @@ public sealed record DesignCorpus(
     {
         var entries = ThemeEntries[theme];
 
-        // Bounded by the entry count, so a cyclic alias terminates instead of
-        // hanging the suite.
+        // Bound hops so cyclic aliases terminate.
         for (var hop = 0; hop <= entries.Count; hop++)
         {
             if (!entries.TryGetValue(key, out var value))
@@ -137,8 +125,7 @@ public sealed record DesignCorpus(
             .Matches(body)
             .Select(match => (Key: match.Groups["key"].Value, Value: match.Groups["value"].Value));
 
-        // Aliases are marked so resolution can tell "this is a colour" from
-        // "this points at whatever that role is", without a second type.
+        // Mark aliases so resolution distinguishes colours from references.
         var aliases = AliasEntryPattern
             .Matches(body)
             .Select(match => (Key: match.Groups["key"].Value, Value: "->" + match.Groups["target"].Value));
@@ -195,7 +182,7 @@ public enum Theme
     HighContrast,
 }
 
-/// <summary>Locates the repository root from the test assembly's location.</summary>
+/// <summary>Locates the repository root from the test assembly.</summary>
 internal static class SourceTree
 {
     public static string Root { get; } = Find();

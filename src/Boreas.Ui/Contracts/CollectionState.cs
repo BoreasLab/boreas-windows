@@ -4,10 +4,8 @@ namespace Boreas.Ui.Contracts;
 /// The six states every data container in this application ships.
 /// </summary>
 /// <remarks>
-/// Independent flags admit contradictions (loading together with error) and
-/// cannot tell "none exist" from "none match the filter", which are different
-/// screens with different copy and different actions. This is one closed set
-/// instead, so a view that forgets a state does not compile.
+/// A closed set prevents contradictory flags and distinguishes no records from
+/// no matches, which require different screens and actions.
 /// </remarks>
 public abstract record CollectionState<T>
 {

@@ -4,7 +4,7 @@ using Boreas.Ui.Presentation;
 namespace Boreas.Ui.Tests;
 
 /// <summary>
-/// Laws of the six-state container and of the diagnostics list built on it.
+/// Laws for the six-state container and diagnostics list.
 /// </summary>
 public sealed class CollectionStateLaws
 {
@@ -22,8 +22,7 @@ public sealed class CollectionStateLaws
     ];
 
     /// <summary>
-    /// Match is a total eliminator: every state selects exactly one arm, and
-    /// no state falls through to a default that would render a blank region.
+    /// Every state selects exactly one Match arm.
     /// </summary>
     [Theory]
     [MemberData(nameof(AllStates))]
@@ -41,9 +40,7 @@ public sealed class CollectionStateLaws
     }
 
     /// <summary>
-    /// Items exist only where the state says they do. A loading or failed
-    /// container that quietly returns rows would render a list under a
-    /// spinner.
+    /// Only Partial and Ready carry items.
     /// </summary>
     [Theory]
     [MemberData(nameof(AllStates))]
@@ -55,9 +52,7 @@ public sealed class CollectionStateLaws
     }
 
     /// <summary>
-    /// Nothing recorded yet and nothing matching the filter are different
-    /// states. Collapsing them is the most common container bug, and it costs
-    /// the user the one action that would help: clearing the filter.
+    /// Empty and filtered states stay distinct; only filtered offers ClearFilter.
     /// </summary>
     [Fact]
     public void Nothing_recorded_and_nothing_matching_are_distinguished()
@@ -105,8 +100,7 @@ public sealed class CollectionStateLaws
     }
 
     /// <summary>
-    /// A row without a failure carries no remedy text, so the template never
-    /// renders an empty red line under an ordinary transition.
+    /// Ordinary events carry no remedy text.
     /// </summary>
     [Fact]
     public void An_ordinary_event_carries_no_remedy_text()
@@ -119,9 +113,7 @@ public sealed class CollectionStateLaws
     }
 
     /// <summary>
-    /// The support text contains every row on screen and the technical detail
-    /// each one carries, because its whole purpose is to save someone
-    /// transcribing the screen by hand.
+    /// Support copy includes every row and its technical detail.
     /// </summary>
     [Fact]
     public void The_support_text_contains_every_row_and_its_detail()
@@ -146,7 +138,7 @@ public sealed class CollectionStateLaws
         Assert.Contains("adapter busy", text, StringComparison.Ordinal);
     }
 
-    /// <summary>The filter index maps both ways over the closed kind set.</summary>
+    /// <summary>The filter index round-trips over the closed kind set.</summary>
     [Theory]
     [InlineData(0, null)]
     [InlineData(1, ControlEventKind.Transition)]
@@ -166,21 +158,18 @@ public sealed class CollectionStateLaws
     }
 
     /// <summary>
-    /// Event identity is time-ordered, so sorting by id agrees with sorting by
-    /// time. A version 4 identifier would order arbitrarily.
+    /// Version 7 IDs sort with event time; version 4 IDs would not.
     /// </summary>
     [Fact]
     public void Event_identity_is_a_version_7_uuid()
     {
         var id = new ControlEvent(DateTimeOffset.UnixEpoch, ControlEventKind.Channel, "x").Id;
 
-        // RFC 9562 puts the version in the high nibble of the 7th byte.
+        // RFC 9562 stores the version in the high nibble of byte 7.
         Assert.Equal(7, (id.ToByteArray(bigEndian: true)[6] & 0xF0) >> 4);
     }
 
-    /// <summary>
-    /// Drives the model past its initial loading state without a UI thread.
-    /// </summary>
+    /// <summary>Completes initial loading without a UI thread.</summary>
     private static void Settle(DiagnosticsViewModel model) =>
         model.Reload.ExecuteAsync(CancellationToken.None).GetAwaiter().GetResult();
 }

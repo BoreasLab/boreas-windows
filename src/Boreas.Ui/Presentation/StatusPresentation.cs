@@ -6,15 +6,8 @@ namespace Boreas.Ui.Presentation;
 /// The one place a state becomes something a person can read.
 /// </summary>
 /// <remarks>
-/// This is a pure function of the channel state and the service state, so the
-/// entire behaviour of the status screen can be read, reviewed and tested
-/// without a window, a pipe or a service.
-///
-/// The rule it encodes: while the channel is not connected, the client makes
-/// no claim about the tunnel at all. Not "stopped", not "unknown but probably
-/// fine". A stale service state is exactly as untrustworthy as no state, and
-/// this application is one a person consults to decide whether their traffic
-/// is protected.
+/// This pure function suppresses every tunnel claim while the channel is not
+/// connected; a stale service state is not trustworthy.
 /// </remarks>
 public sealed record StatusPresentation(
     string Headline,
@@ -26,8 +19,8 @@ public sealed record StatusPresentation(
     PrimaryAction Action)
 {
     /// <summary>
-    /// What a screen reader is told when the state changes. The headline alone
-    /// would announce "Off" with no subject, which is not a sentence.
+    /// Complete announcement for screen readers; the headline alone lacks a
+    /// subject.
     /// </summary>
     public string Announcement => $"{Headline}. {Detail}";
 
@@ -96,8 +89,7 @@ public sealed record StatusPresentation(
                 Action: PrimaryAction.None),
 
             running: r => r.Status.Bypass.Match(
-                // The claim the product exists to make. It is only made when
-                // upstream sockets are provably outside the tunnel.
+                // Claim protection only when upstream sockets are outside it.
                 bound: _ => new StatusPresentation(
                     Headline: "Protected",
                     Detail: "Traffic from this device is going through Boreas.",
@@ -107,10 +99,7 @@ public sealed record StatusPresentation(
                     ShowProgress: false,
                     Action: PrimaryAction.Stop),
 
-                // Running, but the host could not bind the physical interface,
-                // so upstream traffic may be re-entering the tunnel. Saying
-                // "Protected" here would be the worst thing this screen could
-                // do, so it says the weaker true thing instead.
+                // Degraded bypass may loop upstream traffic back into the tunnel.
                 degraded: d => new StatusPresentation(
                     Headline: "Running",
                     Detail: "The tunnel is up, but Boreas could not keep its own upstream "
@@ -137,9 +126,7 @@ public sealed record StatusPresentation(
                 Glyph: Glyphs.Error,
                 GlyphLabel: $"{Describe(f.Operation)} failed",
                 ShowProgress: false,
-                // The service decides whether retrying is worth offering. A
-                // retry button on an unrecoverable failure trains people to
-                // press buttons that never work.
+                // The service decides whether retrying can change the outcome.
                 Action: f.Recoverable ? PrimaryAction.Retry : PrimaryAction.None));
 
     private static string Describe(ControlOperation operation) => operation switch
@@ -154,8 +141,7 @@ public sealed record StatusPresentation(
 }
 
 /// <summary>
-/// The four tones, named for what they signal rather than for one state.
-/// Each maps to exactly one brush key in Tokens.xaml.
+/// Status tones; each maps to one brush key in Tokens.xaml.
 /// </summary>
 public enum StatusTone
 {
@@ -166,10 +152,7 @@ public enum StatusTone
 }
 
 /// <summary>
-/// The single most prominent action, chosen by the state rather than always
-/// present. <see cref="None"/> is a real case: while the service is starting,
-/// there is nothing useful to press, and offering something anyway would
-/// produce a command the service serialises and rejects.
+/// The state-selected primary action; <see cref="None"/> means no valid action.
 /// </summary>
 public enum PrimaryAction
 {
@@ -181,8 +164,7 @@ public enum PrimaryAction
 }
 
 /// <summary>
-/// Every glyph the application uses, from one family at one weight: Segoe
-/// Fluent Icons, which ships with Windows.
+/// Glyphs from the Windows-provided Segoe Fluent Icons family.
 /// </summary>
 internal static class Glyphs
 {

@@ -23,8 +23,7 @@ public sealed partial class NetworkView : Page
     public ConfigurationViewModel ViewModel { get; }
 
 
-    // Validation on blur, which is the moment a field is finished. Doing it
-    // per keystroke tells people their half-typed address is wrong.
+    // Validate on blur, not keystroke, so half-typed values stay quiet.
     private void OnAdapterBlur(object sender, RoutedEventArgs e) =>
         ViewModel.MarkTouched(ConfigField.Adapter);
 
@@ -41,8 +40,7 @@ public sealed partial class NetworkView : Page
     {
         await ViewModel.Apply.ExecuteAsync(CancellationToken.None);
 
-        // Focus moves to the first thing that needs fixing, so the fix does
-        // not start with hunting for which field failed.
+        // Focus the first invalid field.
         FocusFirstError();
         RenderOutcome();
     }

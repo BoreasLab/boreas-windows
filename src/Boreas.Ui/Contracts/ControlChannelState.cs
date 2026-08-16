@@ -4,20 +4,15 @@ namespace Boreas.Ui.Contracts;
 /// The state of the local control pipe, which is not the state of the tunnel.
 /// </summary>
 /// <remarks>
-/// Conflating these two is the single most damaging mistake this client could
-/// make. "The service is unreachable" and "the tunnel is stopped" look similar
-/// and mean opposite things: the first says nothing at all about whether
-/// traffic is being carried, and telling a user their tunnel is off when the
-/// service simply restarted would be a lie about their network.
-///
-/// So the client shows the channel separately, always, and suppresses every
-/// tunnel claim while the channel is not <see cref="Connected"/>.
+/// An unavailable service does not prove that the tunnel stopped. The client
+/// therefore shows channel state separately and suppresses tunnel claims until
+/// <see cref="Connected"/>.
 /// </remarks>
 public abstract record ControlChannelState
 {
     private ControlChannelState() { }
 
-    /// <summary>First connection, or reconnection after the service restarted.</summary>
+    /// <summary>Initial connection or reconnection after service restart.</summary>
     public sealed record Connecting : ControlChannelState;
 
     public sealed record Connected(int ProtocolVersion) : ControlChannelState;
@@ -40,11 +35,8 @@ public abstract record ControlChannelState
     /// sending one would only produce a confusing typed error.
     /// </summary>
     /// <remarks>
-    /// Only the service's version is carried. The client's was a parameter,
-    /// which meant this state could be constructed reporting a client version
-    /// that was not this client's, and nothing would have caught it. There is
-    /// one client version, <see cref="ControlProtocol.Version"/>, and it is
-    /// read rather than passed.
+    /// Client version is read from <see cref="ControlProtocol.Version"/>, not
+    /// supplied as a constructor value that could describe another client.
     /// </remarks>
     public sealed record VersionMismatch(int ServiceVersion) : ControlChannelState
     {

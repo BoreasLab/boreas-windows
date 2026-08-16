@@ -7,11 +7,8 @@ namespace Boreas.Ui.Services;
 /// The channel this application ships with until W2 exists.
 /// </summary>
 /// <remarks>
-/// It reports the truth: there is no pipe client yet, so nothing is known
-/// about the tunnel. It deliberately does not pretend the service is stopped.
-///
-/// W2 replaces this with the framed, versioned, authenticated named-pipe
-/// client. Nothing above <see cref="IControlChannel"/> changes when it does.
+/// No pipe client exists yet, so tunnel state is unknown rather than stopped.
+/// W2 replaces this implementation without changing <see cref="IControlChannel"/>.
 /// </remarks>
 public sealed class UnimplementedControlChannel : IControlChannel
 {
@@ -30,8 +27,7 @@ public sealed class UnimplementedControlChannel : IControlChannel
 
     public event EventHandler? Changed
     {
-        // Nothing here ever changes, so there is nothing to subscribe to and
-        // nothing to leak. The accessors exist to satisfy the interface.
+        // State never changes; accessors satisfy the interface.
         add { }
         remove { }
     }
@@ -51,8 +47,7 @@ public sealed class UnimplementedControlChannel : IControlChannel
             new ConfigurationOutcome.Rejected(NotBuilt, new Dictionary<ConfigField, string>()));
 
     /// <summary>
-    /// Nothing was opened, so nothing is closed. Present because the interface
-    /// requires it of the implementation that does own a pipe.
+    /// No resources were opened; present to satisfy the interface.
     /// </summary>
     public void Dispose()
     {

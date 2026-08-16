@@ -8,10 +8,8 @@ namespace Boreas.Ui.Tests;
 /// this application tells a person about their network.
 /// </summary>
 /// <remarks>
-/// The domain is a product of two closed sums, and it is small enough to
-/// enumerate rather than sample: five channel states times seven service
-/// states, which is 35 pairs. Every law below is checked against the whole
-/// domain, so these are proofs over the finite model rather than spot checks.
+/// The finite domain is fully enumerated: five channel states by seven service
+/// states, or 35 pairs.
 /// </remarks>
 public sealed class PresentationLaws
 {
@@ -33,9 +31,8 @@ public sealed class PresentationLaws
     ];
 
     /// <summary>
-    /// One representative of each service variant, with Running split by
-    /// bypass because the two carry different claims, and Failed split by
-    /// recoverability because it changes the offered action.
+    /// Service representatives split running bypass and failure recoverability
+    /// because each changes the presentation.
     /// </summary>
     public static IReadOnlyList<ServiceState> Services { get; } =
     [
@@ -75,8 +72,7 @@ public sealed class PresentationLaws
                 Bypass: bypass));
 
     /// <summary>
-    /// Totality. Every pair produces something a person can read: no blank
-    /// headline, no blank sentence, no state that renders as an empty band.
+    /// Every state pair produces readable text.
     /// </summary>
     [Theory]
     [MemberData(nameof(Domain))]
@@ -91,9 +87,7 @@ public sealed class PresentationLaws
     }
 
     /// <summary>
-    /// No information by colour alone. The announcement a screen reader hears
-    /// has to carry everything the tone conveys, so it must contain both the
-    /// headline and the sentence.
+    /// The screen-reader announcement carries headline and detail, not tone alone.
     /// </summary>
     [Theory]
     [MemberData(nameof(Domain))]
@@ -106,11 +100,7 @@ public sealed class PresentationLaws
     }
 
     /// <summary>
-    /// The safety law. While the channel is not connected the client knows
-    /// nothing about the tunnel, so it must not claim protection, must not
-    /// claim the tunnel is off, and must not offer to stop something it cannot
-    /// see. Breaking this would mean telling someone their traffic is
-    /// protected on the strength of a stale reading.
+    /// A disconnected channel makes no tunnel claim or start/stop offer.
     /// </summary>
     [Theory]
     [MemberData(nameof(Domain))]
@@ -131,10 +121,7 @@ public sealed class PresentationLaws
     private static readonly string[] TunnelClaims = ["Protected", "Off", "Running", "Starting", "Stopping"];
 
     /// <summary>
-    /// The protection law, in both directions. "Protected" appears exactly
-    /// when the channel is connected, the session is running, and the bypass
-    /// is bound. A running session whose upstream socket may have re-entered
-    /// the tunnel is not protected and must not say so.
+    /// "Protected" requires a connected, running session with bound bypass.
     /// </summary>
     [Theory]
     [MemberData(nameof(Domain))]
@@ -150,9 +137,7 @@ public sealed class PresentationLaws
     }
 
     /// <summary>
-    /// Action legality. A command is offered only in a state where the service
-    /// would accept it, so no button produces a request the service serialises
-    /// and then rejects.
+    /// Offered actions are legal in their service state.
     /// </summary>
     [Theory]
     [MemberData(nameof(Domain))]
@@ -181,8 +166,7 @@ public sealed class PresentationLaws
     }
 
     /// <summary>
-    /// A transitional state shows progress and offers nothing, because there
-    /// is nothing useful to press while the service is mid-transition.
+    /// Transitional states show progress and offer no action.
     /// </summary>
     [Theory]
     [MemberData(nameof(Domain))]
@@ -205,8 +189,7 @@ public sealed class PresentationLaws
     }
 
     /// <summary>
-    /// An unrecoverable failure offers no retry. A button that cannot work
-    /// teaches people to press buttons that do not work.
+    /// Unrecoverable failures offer no retry.
     /// </summary>
     [Fact]
     public void An_unrecoverable_failure_offers_nothing_to_press()
@@ -218,7 +201,7 @@ public sealed class PresentationLaws
         Assert.Equal(PrimaryAction.None, presentation.Action);
     }
 
-    /// <summary>The label is present exactly when there is an action.</summary>
+    /// <summary>A label exists exactly when an action exists.</summary>
     [Theory]
     [MemberData(nameof(Domain))]
     public void A_label_exists_exactly_when_an_action_does(int channel, int service)
@@ -230,9 +213,7 @@ public sealed class PresentationLaws
     }
 
     /// <summary>
-    /// Session facts appear only for a running session on a live channel.
-    /// Showing an adapter and a byte count next to "No service" would present
-    /// a stale reading as current.
+    /// Session facts appear only for a running session on a connected channel.
     /// </summary>
     [Theory]
     [MemberData(nameof(Domain))]
@@ -248,8 +229,7 @@ public sealed class PresentationLaws
     }
 
     /// <summary>
-    /// The bypass warning appears exactly when the bypass is degraded, and
-    /// never merely because the channel dropped.
+    /// Bypass warning tracks degradation, not channel loss.
     /// </summary>
     [Theory]
     [MemberData(nameof(Domain))]
@@ -263,8 +243,7 @@ public sealed class PresentationLaws
     }
 
     /// <summary>
-    /// The chip is always populated, and a banner appears only where there is
-    /// something to say about the channel.
+    /// The chip is always readable; banners appear only for actionable channel states.
     /// </summary>
     [Theory]
     [MemberData(nameof(Domain))]
@@ -282,9 +261,7 @@ public sealed class PresentationLaws
     }
 
     /// <summary>
-    /// A banner offers an action only where retrying could change the answer.
-    /// Authorization and version mismatch will not change until someone
-    /// installs or configures something, so neither offers a button.
+    /// Only retryable channel failure offers an action.
     /// </summary>
     [Fact]
     public void Only_a_retryable_channel_failure_offers_an_action()
@@ -295,17 +272,11 @@ public sealed class PresentationLaws
     }
 
     /// <summary>
-    /// Every selector array names every value of its enum.
+    /// Every selector array covers its enum.
     /// </summary>
     /// <remarks>
-    /// The property that makes those selectors total. Each maps its enum to a
-    /// control index with one array read forwards and backwards, which removes
-    /// any chance of the two directions disagreeing but leaves one hole:
-    /// <see cref="Array.IndexOf{T}(T[], T)"/> answers -1 for a value the array
-    /// omits, and a control asked to select -1 shows nothing selected. C# has
-    /// no way to require an array to cover an enum, so it is required here. Add
-    /// a route mode or an event kind without adding its segment and this fails,
-    /// which is the notification the compiler cannot give.
+    /// C# cannot require enum coverage in arrays; this catches omissions and
+    /// protects direct index assumptions.
     /// </remarks>
     [Fact]
     public void Every_selector_covers_its_closed_set()
@@ -313,22 +284,16 @@ public sealed class PresentationLaws
         Assert.Equal(Enum.GetValues<RouteMode>(), ConfigurationViewModel.RouteOrder);
         Assert.Equal(Enum.GetValues<EgressPolicy>(), ConfigurationViewModel.EgressOrder);
 
-        // Not only a selector order. The network form keeps one state per field
-        // in an array positioned by this, so a field the array omits would have
-        // nowhere to record its message and would throw when the user left it.
+        // The network form also indexes one state per field.
         Assert.Equal(Enum.GetValues<ConfigField>(), ConfigurationParser.AllFields.ToArray());
 
-        // And the array is indexed by the field's own value, which is what
-        // makes that lookup O(1) rather than a scan. Give a member a
-        // hand-assigned value and it lands in another field's slot, or past
-        // the end of the array; this is where that stops.
+        // Dense enum values are required for direct indexing.
         foreach (var (position, field) in ConfigurationParser.AllFields.Index())
         {
             Assert.Equal(position, (int)field);
         }
 
-        // Null leads the filter segments: "everything" is a choice, so the
-        // array is one longer than the enum it covers.
+        // Null is the leading "everything" filter choice.
         Assert.Equal(
             Enum.GetValues<ControlEventKind>().Cast<ControlEventKind?>(),
             DiagnosticsViewModel.FilterOrder.Skip(1));
@@ -336,14 +301,11 @@ public sealed class PresentationLaws
     }
 
     /// <summary>
-    /// Wire names round-trip, and every field has one.
+    /// Every configuration field has a distinct round-tripping wire name.
     /// </summary>
     /// <remarks>
-    /// The two directions are separate switches, so this is what keeps them
-    /// agreeing. It also fixes the names: changing one without the other, or
-    /// adding a field and forgetting its name, fails here rather than at the
-    /// pipe, where the symptom would be a service message that silently
-    /// attaches to no field.
+    /// Separate switches must remain inverse; this fails before a pipe response
+    /// can become an unpinned field error.
     /// </remarks>
     [Fact]
     public void Every_configuration_field_round_trips_through_its_wire_name()
@@ -361,8 +323,7 @@ public sealed class PresentationLaws
     }
 
     /// <summary>
-    /// A name from a newer service is version skew, not a defect: it parses to
-    /// nothing, so the message is shown without being pinned to a field.
+    /// Unknown service names are version skew and map to no field.
     /// </summary>
     [Theory]
     [InlineData("")]
@@ -376,9 +337,7 @@ public sealed class PresentationLaws
         Assert.Null(ConfigField.FromWireName(null));
 
     /// <summary>
-    /// A version mismatch reports this client's actual version. It used to be
-    /// a constructor parameter, so the state could carry a number that was
-    /// nobody's.
+    /// Version mismatch reports this client's actual protocol version.
     /// </summary>
     [Fact]
     public void A_version_mismatch_reports_the_version_this_client_speaks()
@@ -388,8 +347,7 @@ public sealed class PresentationLaws
         Assert.Equal(ControlProtocol.Version, mismatch.ClientVersion);
         Assert.Equal(99, mismatch.ServiceVersion);
 
-        // And the text the user reads says the same thing, rather than
-        // rendering a version from somewhere else.
+        // Presentation uses the same client version.
         var presentation = StatusPresentation.For(mismatch, new ServiceState.Stopped());
         Assert.Contains(
             ControlProtocol.Version.ToString(),

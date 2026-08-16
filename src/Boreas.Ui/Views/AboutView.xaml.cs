@@ -9,8 +9,7 @@ public sealed partial class AboutView : Page
     {
         InitializeComponent();
 
-        // Read, not typed in. A version string maintained by hand is wrong
-        // the first time someone forgets to change it.
+        // Read from assembly metadata so it cannot drift from the build.
         AppVersion.Text = Assembly.GetExecutingAssembly()
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
             ?? Assembly.GetExecutingAssembly().GetName().Version?.ToString()

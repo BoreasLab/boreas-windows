@@ -7,9 +7,8 @@ namespace Boreas.Ui.Converters;
 /// The application's one visibility converter.
 /// </summary>
 /// <remarks>
-/// One mechanism, used everywhere, so no reader has to work out whether a
-/// given binding hides its target through a converter, a code-behind method
-/// or a view-model property that returns a UI type.
+/// Bindings use this converter instead of view-model properties returning UI
+/// types.
 /// </remarks>
 public sealed class BoolToVisibility : IValueConverter
 {

@@ -4,10 +4,8 @@ namespace Boreas.Ui.Contracts;
 /// The immutable status snapshot for a running session.
 /// </summary>
 /// <remarks>
-/// Everything here comes from <c>status_snapshot</c>, which "never returns
-/// packet payloads". Counters are bounded and coarse by design: they exist so
-/// a user can tell a live tunnel from a silent one, not so anyone can inspect
-/// traffic from the control client.
+/// <c>status_snapshot</c> returns bounded, coarse counters for liveness, never
+/// packet payloads for inspection.
 /// </remarks>
 public sealed record SessionStatus(
     string AdapterName,
@@ -31,12 +29,8 @@ public readonly record struct SessionCounters(
 /// Whether upstream sockets are provably outside the tunnel.
 /// </summary>
 /// <remarks>
-/// docs/platform-integration.md makes this a first-class outcome rather than a
-/// detail: an upstream socket that follows the default route loops back into
-/// Boreas, and the host must report typed degradation when it cannot bind the
-/// physical interface. A user whose bypass has degraded is in a materially
-/// different situation from one whose tunnel is simply running, so the status
-/// view says so instead of showing an unqualified "Protected".
+/// Without a physical-interface binding, upstream sockets can loop back into
+/// Boreas. Degradation is therefore reported instead of claiming protection.
 /// </remarks>
 public abstract record EgressBypass
 {

@@ -1,19 +1,15 @@
 namespace Boreas.Ui.Tests;
 
 /// <summary>
-/// An sRGB colour, parsed once from the hex the design tokens are written in.
+/// An sRGB colour parsed from design-token hex.
 /// </summary>
 /// <remarks>
-/// A refined type rather than a string: every function below takes a
-/// <see cref="Colour"/>, so a malformed token cannot reach the contrast maths
-/// and quietly produce a passing ratio.
+/// The refined type prevents malformed tokens from reaching contrast math.
 /// </remarks>
 public readonly record struct Colour(byte R, byte G, byte B)
 {
     /// <summary>
-    /// The smart constructor. Returns null for anything that is not a literal
-    /// six or eight digit hex colour, including named colours and the
-    /// <c>{ThemeResource ...}</c> indirections used under forced colours.
+    /// Parses literal six- or eight-digit hex colours; returns null otherwise.
     /// </summary>
     public static Colour? TryParse(string? raw)
     {
@@ -30,8 +26,7 @@ public readonly record struct Colour(byte R, byte G, byte B)
 
         var digits = text[1..];
 
-        // #aarrggbb: the alpha channel is dropped, because every pairing this
-        // suite measures is opaque. An overlay would need compositing first.
+        // Pairings are opaque; discard #aarrggbb's alpha until compositing exists.
         if (digits.Length == 8)
         {
             digits = digits[2..];
@@ -70,9 +65,7 @@ public readonly record struct Colour(byte R, byte G, byte B)
     }
 
     /// <summary>
-    /// CIE 1976 perceptual distance, used to prove two roles do not look alike.
-    /// A contrast ratio cannot do this: two colours of equal luminance have a
-    /// ratio of exactly 1 whether they are the same colour or opposites.
+    /// CIE 1976 distance, used where contrast cannot show perceptual difference.
     /// </summary>
     public static double Distance(Colour a, Colour b)
     {

@@ -6,14 +6,8 @@ namespace Boreas.Ui.Presentation;
 /// Window-level state: the channel chip and the channel banner.
 /// </summary>
 /// <remarks>
-/// Appearance is not among them, and that is the design. A theme preference
-/// was a third state beside the two the platform already has, stored in a file
-/// that outlived the session it was chosen in: someone who picked Dark once
-/// kept a dark window after switching Windows to light, with the control that
-/// explains it two pages away and no reason left to look for it. The window
-/// now sets no theme at all, so it inherits the system's and follows it when
-/// it changes, which is both the behaviour people expect and one fewer state
-/// this application can hold an opinion about.
+/// Appearance is intentionally absent: the window follows the system theme
+/// instead of storing a separate preference.
 /// </remarks>
 public sealed class ShellViewModel : ObservableObject, IDisposable
 {
@@ -29,10 +23,8 @@ public sealed class ShellViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// True when the window is showing invented values from
-    /// <c>SampleControlChannel</c>. The window says so, permanently and
-    /// visibly, because a screen that looks like a live tunnel and is not one
-    /// is the most dangerous thing this application could display.
+    /// True when the window shows invented values from
+    /// <c>SampleControlChannel</c>; the window marks them visibly.
     /// </summary>
     public bool UsingSampleData { get; }
 

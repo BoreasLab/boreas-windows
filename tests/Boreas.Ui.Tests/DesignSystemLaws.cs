@@ -3,12 +3,10 @@ using System.Text.RegularExpressions;
 namespace Boreas.Ui.Tests;
 
 /// <summary>
-/// Laws the visual system has to satisfy, checked against the XAML rather than
-/// against a comment claiming it.
+/// Visual-system laws checked against XAML.
 /// </summary>
 /// <remarks>
-/// The corpus is built once for the whole class. Each law is then a pure
-/// predicate over it.
+/// The corpus is built once; each law is a pure predicate over it.
 /// </remarks>
 public sealed class DesignSystemLaws
 {
@@ -18,10 +16,7 @@ public sealed class DesignSystemLaws
     private static readonly Theme[] LiteralThemes = [Theme.Light, Theme.Dark];
 
     /// <summary>
-    /// Text pairings and the ratio each needs. Normal text needs 4.5:1;
-    /// anything at or above the large-text threshold needs 3:1. Nothing in
-    /// this table is exempt, so every entry carries the stricter figure unless
-    /// the role is only ever set at a display size.
+    /// Text pairings and their required contrast ratios.
     /// </summary>
     public static TheoryData<Theme, string, string, double> TextPairings()
     {
@@ -49,12 +44,7 @@ public sealed class DesignSystemLaws
     }
 
     /// <summary>
-    /// Marks that identify a control or its state. These carry no text, so the
-    /// non-text figure applies rather than the reading one.
-    ///
-    /// The status tones are here, not in the text table, because a tone is
-    /// only ever a ring, a glyph or a dot. Every place one appears, the state
-    /// is also written beside it in words set in a text role.
+    /// Non-text control marks and status tones with their contrast backgrounds.
     /// </summary>
     public static TheoryData<Theme, string, string> NonTextPairings()
     {
@@ -68,14 +58,13 @@ public sealed class DesignSystemLaws
             data.Add(theme, "FocusRing", "SurfaceCard");
             data.Add(theme, "FocusVisualPrimaryBrush", "SurfaceCanvas");
 
-            // The band is dark in both themes, so its tones are measured
-            // against it in both themes.
+            // The band is dark in both themes.
             foreach (var tone in BandTones)
             {
                 data.Add(theme, tone, "SurfaceBand");
             }
 
-            // The chip and the banner icon sit on the cream surfaces.
+            // Chip and banner icons sit on canvas surfaces.
             foreach (var tone in CanvasTones)
             {
                 data.Add(theme, tone, "SurfaceCanvas");
@@ -114,11 +103,7 @@ public sealed class DesignSystemLaws
     }
 
     /// <summary>
-    /// Danger must not look like the accent, or a destructive action stops
-    /// reading as destructive. Contrast cannot express this: two colours of
-    /// equal luminance have a ratio of 1 whether they match or clash. This is
-    /// perceptual distance, and 15 sits far above the roughly 2.3 that is one
-    /// just-noticeable difference.
+    /// Perceptual distance keeps danger and status tones distinct from accent.
     /// </summary>
     [Theory]
     [InlineData(Theme.Light)]
@@ -138,8 +123,7 @@ public sealed class DesignSystemLaws
     }
 
     /// <summary>
-    /// A role missing from one theme falls back to whatever the platform
-    /// supplies there, which is how a theme ends up half designed.
+    /// Every theme defines the same roles.
     /// </summary>
     [Fact]
     public void Every_theme_defines_the_same_roles()
@@ -158,8 +142,7 @@ public sealed class DesignSystemLaws
     }
 
     /// <summary>
-    /// Under forced colours the user's chosen pair wins outright, so no role
-    /// may carry a colour of its own there.
+    /// High contrast defers every colour role to the system.
     /// </summary>
     [Fact]
     public void High_contrast_defers_every_role_to_the_system()
@@ -173,8 +156,8 @@ public sealed class DesignSystemLaws
     }
 
     /// <summary>
-    /// A key that resolves nowhere is a blank region or a crash on Windows.
-    /// Nothing in a Linux compile catches it, so it is caught here.
+    /// Every resource reference resolves; Linux compilation cannot catch missing
+    /// Windows resource keys.
     /// </summary>
     [Fact]
     public void Every_resource_reference_resolves()
@@ -187,9 +170,7 @@ public sealed class DesignSystemLaws
     }
 
     /// <summary>
-    /// One definition per colour. A literal outside the token file is a value
-    /// that will not follow a theme change and will not be found by anyone
-    /// looking for it.
+    /// Colour literals belong only in the token file.
     /// </summary>
     [Fact]
     public void Only_the_token_file_names_a_colour()

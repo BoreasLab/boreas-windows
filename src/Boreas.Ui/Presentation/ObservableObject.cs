@@ -7,9 +7,7 @@ namespace Boreas.Ui.Presentation;
 /// Minimal change notification.
 /// </summary>
 /// <remarks>
-/// Hand-written rather than taken from an MVVM package. AGENTS.md requires a
-/// license, maintenance and transitive-graph review before any dependency is
-/// admitted, and thirty lines is not worth that review.
+/// Hand-written to avoid an MVVM dependency for this small surface.
 /// </remarks>
 public abstract class ObservableObject : INotifyPropertyChanged
 {
@@ -20,12 +18,8 @@ public abstract class ObservableObject : INotifyPropertyChanged
 
     /// <summary>Assigns and notifies only when the value actually changed.</summary>
     /// <remarks>
-    /// The receiver is named <paramref name="storage"/> rather than
-    /// <c>field</c>. Every call site passes <c>ref field</c> from inside a
-    /// property accessor, where that identifier is the C# 14 contextual keyword
-    /// for the synthesized backing field; naming the parameter the same thing
-    /// made the declaration read as though it were that keyword, which it never
-    /// is.
+    /// <paramref name="storage"/> avoids <c>field</c>, a C# 14 contextual
+    /// keyword in property accessors.
     /// </remarks>
     protected bool Set<T>(ref T storage, T value, [CallerMemberName] string? propertyName = null)
     {

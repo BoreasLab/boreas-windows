@@ -6,11 +6,8 @@ namespace Boreas.Ui.Presentation;
 /// How the control channel is shown: always as a chip, sometimes as a banner.
 /// </summary>
 /// <remarks>
-/// Two channels because they answer two different questions. The chip sits in
-/// the title bar and is always present, so "is this app talking to the
-/// service" costs a glance and never causes the layout to move. The banner
-/// appears only when there is something to do about it, so it does not become
-/// furniture people stop reading.
+/// The chip always answers whether the app can reach the service; the banner
+/// appears only when the channel needs user action.
 /// </remarks>
 public sealed record ChannelPresentation(
     string ChipLabel,
@@ -46,7 +43,7 @@ public sealed record ChannelPresentation(
                        + "command. Ask whoever installed Boreas to add this account, then "
                        + "sign out and back in.",
                 Tone: StatusTone.Fault,
-                // Nothing to retry: the answer will not change until policy does.
+                  // Authorization cannot change through a retry.
                 ActionLabel: null)),
 
         versionMismatch: v => new ChannelPresentation(
