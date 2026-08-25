@@ -130,10 +130,22 @@ public static class Rendering
     /// <c>major.minor.0.0</c>: held stable within a minor.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// This is a binding identity, not a build stamp. Moving it on every build
     /// would make every assembly reference a distinct one, which is the problem
     /// strong-name binding policy exists to work around rather than a thing to
     /// create.
+    /// </para>
+    /// <para>
+    /// <b>It also could not carry the counter even if it should.</b> The two
+    /// fields have different ceilings, which was checked against the compiler
+    /// rather than inferred: <c>-p:FileVersion=0.4.2.65535</c> builds, and
+    /// <c>-p:AssemblyVersion=0.4.0.65535</c> is refused with CS7034. Assembly
+    /// metadata caps a component at <c>UInt16.MaxValue - 1</c>; a Win32
+    /// VERSIONINFO field is a full <c>WORD</c>. The release revision this scheme
+    /// uses is the value only one of the two accepts, so it belongs in only one
+    /// of them.
+    /// </para>
     /// </remarks>
     public static WindowsVersion AssemblyVersion(Publish publish) =>
         WindowsVersion.TryCreate(publish.Version.Major, publish.Version.Minor, 0, 0)
