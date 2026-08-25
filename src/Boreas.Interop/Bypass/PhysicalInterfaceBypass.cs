@@ -23,7 +23,7 @@ namespace Boreas.Interop.Bypass;
 /// a field access.
 /// </para>
 /// </remarks>
-internal sealed class PhysicalInterfaceBypass
+public sealed class PhysicalInterfaceBypass
 {
     /// <summary>
     /// How a socket is bound to an interface. Injected so the vtable's

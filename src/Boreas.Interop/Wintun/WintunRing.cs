@@ -26,7 +26,7 @@ namespace Boreas.Interop.Wintun;
 /// </para>
 /// </remarks>
 [SupportedOSPlatform("windows")]
-internal sealed class WintunRing : IPacketRing
+public sealed class WintunRing : IPacketRing
 {
     private const int ReadWaitIndex = 0;
     private const int QuitIndex = 1;

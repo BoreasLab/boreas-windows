@@ -92,7 +92,7 @@ internal static partial class Wintun
 
 /// <summary>The adapter, closed after its session ends.</summary>
 [SupportedOSPlatform("windows")]
-internal sealed class WintunAdapterHandle : SafeHandle
+public sealed class WintunAdapterHandle : SafeHandle
 {
     public WintunAdapterHandle()
         : base(invalidHandleValue: nint.Zero, ownsHandle: true)
@@ -113,7 +113,7 @@ internal sealed class WintunAdapterHandle : SafeHandle
 
 /// <summary>The session, ended before its adapter closes.</summary>
 [SupportedOSPlatform("windows")]
-internal sealed class WintunSessionHandle : SafeHandle
+public sealed class WintunSessionHandle : SafeHandle
 {
     public WintunSessionHandle()
         : base(invalidHandleValue: nint.Zero, ownsHandle: true)

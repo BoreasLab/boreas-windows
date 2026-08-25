@@ -98,6 +98,32 @@ internal sealed unsafe class Utf8Block : IDisposable
     }
 
     /// <summary>
+    /// Copies raw bytes, with no terminator.
+    /// </summary>
+    /// <remarks>
+    /// The authority's certificate and keys are byte arrays rather than text
+    /// and carry their own lengths, so a terminator would be a byte Boreas
+    /// would read as content. They go through the same arena as the strings
+    /// because they have the same lifetime - borrowed for the start call - and
+    /// one owner with one release point is easier to be sure of than a pinned
+    /// managed array per half.
+    /// </remarks>
+    public byte* AddBytes(ReadOnlySpan<byte> value)
+    {
+        if (value.IsEmpty)
+        {
+            return null;
+        }
+
+        var block = (byte*)NativeMemory.Alloc((nuint)value.Length);
+        _blocks.Add((nint)block);
+
+        value.CopyTo(new Span<byte>(block, value.Length));
+
+        return block;
+    }
+
+    /// <summary>
     /// Frees every block. Idempotent, because clearing the list is part of it.
     /// </summary>
     public void Dispose()

@@ -40,7 +40,7 @@ internal static class Errno
 /// somewhere it could not be tested.
 /// </para>
 /// </remarks>
-internal interface IPacketRing : IDisposable
+public interface IPacketRing : IDisposable
 {
     /// <summary>The MTU the interface is configured with. At least 1280.</summary>
     ushort Mtu { get; }
