@@ -197,4 +197,62 @@ public sealed class RenderingLaws
     [InlineData(0, 0, 0, 65536)]
     public void A_windows_version_refuses_anything_wider(int a, int b, int c, int d) =>
         Assert.Null(WindowsVersion.TryCreate(a, b, c, d));
+
+    // ------------------------------------------------- the other ceiling
+
+    /// <summary>
+    /// The mirror of the theory above, and <b>the pair of opposite verdicts on
+    /// 65535 is the assertion worth having</b>: a VERSIONINFO WORD takes it and
+    /// an assembly identity does not.
+    /// </summary>
+    /// <remarks>
+    /// <c>-p:AssemblyVersion=65535.0.0.0</c> is <b>CS7034</b>, in that position
+    /// and in every other; 65534 builds in all four. An identity must be able to
+    /// say "this component is unspecified" - what a partial reference like
+    /// <c>Foo, Version=1.0</c> is built from - and with no presence bit beside
+    /// the four metadata USHORTs, 0xFFFF is spent as that sentinel. A label
+    /// names nothing and so reserves nothing.
+    /// </remarks>
+    [Fact]
+    public void An_assembly_identity_stops_one_short_of_a_word()
+    {
+        Assert.NotNull(AssemblyIdentityVersion.TryCreate(AssemblyIdentityVersion.MaxField, 0));
+        Assert.NotNull(AssemblyIdentityVersion.TryCreate(0, AssemblyIdentityVersion.MaxField));
+
+        // CS7034's bound, from either side.
+        Assert.Null(AssemblyIdentityVersion.TryCreate(65535, 0));
+        Assert.Null(AssemblyIdentityVersion.TryCreate(0, 65535));
+
+        // The same number, two verdicts, because the two fields are not the
+        // same kind of thing.
+        Assert.NotNull(WindowsVersion.TryCreate(65535, 65535, 65535, 65535));
+        Assert.Equal(WindowsVersion.MaxField - 1, AssemblyIdentityVersion.MaxField);
+    }
+
+    [Theory]
+    [InlineData(-1, 0)]
+    [InlineData(0, -1)]
+    [InlineData(65536, 0)]
+    public void An_assembly_identity_refuses_anything_wider(int major, int minor) =>
+        Assert.Null(AssemblyIdentityVersion.TryCreate(major, minor));
+
+    /// <summary>
+    /// Build and revision are the rendering, not state. There is no way to set
+    /// them, which is what a two-field type buys over asserting they are zero.
+    /// </summary>
+    [Fact]
+    public void An_assembly_identity_renders_its_trailing_zeroes() =>
+        Assert.Equal("1.2.0.0", Assert.NotNull(AssemblyIdentityVersion.TryCreate(1, 2)).ToString());
+
+    /// <summary>
+    /// The release sentinel is one past what an assembly identity accepts, which
+    /// is the whole reason the two are different types.
+    /// </summary>
+    [Fact]
+    public void The_release_sentinel_is_not_a_value_an_identity_could_hold()
+    {
+        Assert.Equal(WindowsVersion.MaxField, Rendering.ReleaseRevision);
+        Assert.True(Rendering.ReleaseRevision > AssemblyIdentityVersion.MaxField);
+        Assert.Null(AssemblyIdentityVersion.TryCreate(Rendering.ReleaseRevision, 0));
+    }
 }

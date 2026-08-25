@@ -5,9 +5,25 @@ namespace Boreas.Build;
 /// <summary>
 /// A Win32 <c>VERSIONINFO</c> quad: four <c>WORD</c> fields.
 /// </summary>
+/// <remarks>
+/// <b>Nothing else enforces this range.</b> The compiler range-checks assembly
+/// identity and does not check a file version at all:
+/// <c>-p:FileVersion=65536.0.0.0</c> builds without complaint. Whatever happens
+/// to the extra bits happens silently in the resource, so
+/// <see cref="TryCreate"/> is the only place a value that will not fit is
+/// refused.
+/// </remarks>
 public readonly record struct WindowsVersion : IComparable<WindowsVersion>
 {
-    /// <summary>Each field is a <c>WORD</c>.</summary>
+    /// <summary>
+    /// Each field is a <c>WORD</c>, and a <c>WORD</c> reserves nothing.
+    /// </summary>
+    /// <remarks>
+    /// One below this is <see cref="AssemblyIdentityVersion.MaxField"/>, and the
+    /// difference is not a quirk - see that type for why a name reserves a value
+    /// and a label does not. The two ceilings live on two types precisely so
+    /// that neither can be reached for where the other belongs.
+    /// </remarks>
     public const int MaxField = ushort.MaxValue;
 
     private WindowsVersion(int major, int minor, int build, int revision)
@@ -46,6 +62,70 @@ public readonly record struct WindowsVersion : IComparable<WindowsVersion>
 
     public override string ToString() => string.Create(
         CultureInfo.InvariantCulture, $"{Major}.{Minor}.{Build}.{Revision}");
+}
+
+/// <summary>
+/// The version part of a CLI assembly identity.
+/// </summary>
+/// <remarks>
+/// <para>
+/// <b>Two fields, not four.</b> This scheme holds build and revision at zero,
+/// so a four-field type would have to assert that two of them are - and a test
+/// asserting a field is zero is a test of something a two-field type simply
+/// cannot say. The zeroes appear once, in <see cref="ToString"/>, which is the
+/// only place they are real.
+/// </para>
+/// <para>
+/// <b>The ceiling is one below <see cref="WindowsVersion.MaxField"/>, and the
+/// asymmetry is the difference between a name and a label.</b> An assembly
+/// identity must be able to say "this component is unspecified" - that is what
+/// a partial reference like <c>Foo, Version=1.0</c> is built from - and with no
+/// presence bit beside the four metadata <c>USHORT</c>s, <c>0xFFFF</c> is spent
+/// as the sentinel. So Roslyn is handed <c>ushort.MaxValue - 1</c> as the
+/// ceiling unconditionally, not only where a wildcard appears. A VERSIONINFO
+/// <c>WORD</c> names nothing and therefore reserves nothing.
+/// </para>
+/// <para>
+/// <b>Checked against the compiler, in every position.</b>
+/// <c>-p:AssemblyVersion=65534.0.0.0</c>, <c>0.65534.0.0</c> and the rest build;
+/// <c>65535</c> in <i>any</i> of the four is CS7034. A file version takes 65535
+/// in any position and builds.
+/// </para>
+/// <para>
+/// There is deliberately no <c>IComparable</c> and there are no comparison
+/// operators. Nothing orders assembly versions: the four-field type carries them
+/// only because file versions are ordered, and copying what has no use here
+/// would invite somebody to find one.
+/// </para>
+/// </remarks>
+public readonly record struct AssemblyIdentityVersion
+{
+    /// <summary>
+    /// The largest value assembly metadata accepts in a component, from
+    /// CS7034's bound.
+    /// </summary>
+    public const int MaxField = ushort.MaxValue - 1;
+
+    private AssemblyIdentityVersion(int major, int minor)
+    {
+        Major = major;
+        Minor = minor;
+    }
+
+    public int Major { get; }
+
+    public int Minor { get; }
+
+    public static AssemblyIdentityVersion? TryCreate(int major, int minor) =>
+        InRange(major) && InRange(minor) ? new AssemblyIdentityVersion(major, minor) : null;
+
+    private static bool InRange(int field) => field is >= 0 and <= MaxField;
+
+    /// <summary>
+    /// <c>major.minor.0.0</c>. The trailing zeroes are the rendering, not state.
+    /// </summary>
+    public override string ToString() => string.Create(
+        CultureInfo.InvariantCulture, $"{Major}.{Minor}.0.0");
 }
 
 /// <summary>
@@ -137,20 +217,18 @@ public static class Rendering
     /// create.
     /// </para>
     /// <para>
-    /// <b>It also could not carry the counter even if it should.</b> The two
-    /// fields have different ceilings, which was checked against the compiler
-    /// rather than inferred: <c>-p:FileVersion=0.4.2.65535</c> builds, and
-    /// <c>-p:AssemblyVersion=0.4.0.65535</c> is refused with CS7034. Assembly
-    /// metadata caps a component at <c>UInt16.MaxValue - 1</c>; a Win32
-    /// VERSIONINFO field is a full <c>WORD</c>. The release revision this scheme
-    /// uses is the value only one of the two accepts, so it belongs in only one
-    /// of them.
+    /// <b>It also could not carry the counter even if it should</b>, because
+    /// <see cref="ReleaseRevision"/> is one past what assembly metadata accepts.
+    /// That is why the return type is not the four-field quad: the two fields
+    /// have different ceilings, and a shared constant that is right for one
+    /// caller and wrong for the other is the bug rather than the convenience.
     /// </para>
     /// </remarks>
-    public static WindowsVersion AssemblyVersion(Publish publish) =>
-        WindowsVersion.TryCreate(publish.Version.Major, publish.Version.Minor, 0, 0)
+    public static AssemblyIdentityVersion AssemblyVersion(Publish publish) =>
+        AssemblyIdentityVersion.TryCreate(publish.Version.Major, publish.Version.Minor)
         ?? throw new InvalidOperationException(
-            $"{publish.Version} has a major or minor beyond {WindowsVersion.MaxField}.");
+            $"{publish.Version} has a major or minor beyond {AssemblyIdentityVersion.MaxField}, "
+            + "which assembly metadata will not accept.");
 
     /// <summary>
     /// The full SemVer, verbatim and without the <c>v</c>.
