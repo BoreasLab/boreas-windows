@@ -113,10 +113,42 @@ jobs:
           PROJECT: ${{ matrix.project }}
         run: dotnet test "$PROJECT" --configuration Release
 
+  # The workflow files themselves, on the same terms as the laws above: ci.yml
+  # lints them too, and the two workflows race. A release cut from a main whose
+  # workflows do not lint is a release cut from a main nobody has checked.
+  lint:
+    name: Workflows
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          submodules: false
+
+      # Fetched by exact version and verified against a digest recorded here,
+      # one per architecture, so this step cannot be changed by anything
+      # happening upstream. It also ShellChecks every run: block above.
+      - name: Run actionlint
+        shell: bash
+        env:
+          ACTIONLINT_VERSION: 1.7.12
+          ACTIONLINT_SHA256_AMD64: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+          ACTIONLINT_SHA256_ARM64: 325e971b6ba9bfa504672e29be93c24981eeb1c07576d730e9f7c8805afff0c6
+        run: ./.github/scripts/actionlint.sh
+
+      - name: Run zizmor
+        shell: bash
+        env:
+          ZIZMOR_VERSION: 1.29.0
+        run: ./.github/scripts/zizmor.sh
+
   # WinUI 3 builds on Windows and nowhere else.
   build:
     name: Build ${{ matrix.platform }}
-    needs: [plan, gate]
+    needs: [plan, gate, lint]
     runs-on: windows-latest
     timeout-minutes: 30
     permissions:
@@ -237,7 +269,13 @@ jobs:
       # THE PAIR A BUG REPORT HAS TO MAP TO. An artefact here embeds a pinned
       # boreas-core release, so neither version alone identifies what ran: a
       # report naming only the app maps to a range of cores, and one naming
-      # neither maps to nothing. The same two lines are in the about window.
+      # neither maps to nothing. The same lines are in the about window.
+      #
+      # The file version sits inside the same fenced block rather than in an
+      # inline code span, because it belongs with the other identity facts - and
+      # because a backtick pair inside a single-quoted printf format reads as
+      # command substitution to shellcheck, which is a warning worth not having
+      # to suppress.
       - name: Compose the notes
         shell: bash
         env:
@@ -251,9 +289,9 @@ jobs:
             printf '```\n'
             printf 'app  %s  (%s)\n' "${TAG#v}" "$POSITION"
             printf 'core %s\n' "$CORE"
+            printf 'file %s\n' "$FILE_VERSION"
             printf '```\n\n'
-            printf 'File version `%s`. Unsigned: see docs for what that means for a tester.\n\n' \
-              "$FILE_VERSION"
+            printf 'Unsigned. docs/releasing.md says what that means for a tester.\n\n'
             printf 'Verify before installing:\n\n'
             printf '```sh\n'
             printf 'gh attestation verify boreas-*.zip --repo %s\n' "$GITHUB_REPOSITORY"
