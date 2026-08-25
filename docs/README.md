@@ -10,6 +10,7 @@ need a coordinated `boreas-core` change.
 | [Platform Integration](platform-integration.md) | WinUI 3, native service host, Wintun, named-pipe security and bypass glue |
 | [UI Design](ui-design.md) | the control client's tokens, screens, state presentation and interaction rules |
 | [Implementation Plan](implementation-plan.md) | work order, acceptance gates and Windows test matrix |
+| [Releasing](releasing.md) | **Current.** Tag shapes, what the version fields mean, the distribution format and what it costs, code signing, and branch protection |
 | [Verified Inputs](verified-inputs.md) | fact-checked platform inputs, source links, and unresolved decisions |
 | [Bootstrap the dev environment](../.agents/skills/setup-boreas-windows/SKILL.md) | building and testing the core on a machine with no system .NET, without sudo and without touching $HOME |
 

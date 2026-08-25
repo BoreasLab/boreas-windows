@@ -2,7 +2,8 @@
 #
 # Two effect domains, so two jobs.
 #
-#   core  ubuntu, cheap. Builds and runs the OS-independent laws: the ABI's
+#   core  ubuntu, cheap. Builds and runs the OS-independent laws: the release
+#         tag algebra and how it renders into version fields, the ABI's
 #         layout and widths, both vtables' obligations, the configuration
 #         lowering, the state machine the interface renders, the form's parser,
 #         and the design system measured out of the XAML. Also the boundary
@@ -66,6 +67,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - name: build
+            project: tests/Boreas.Build.Tests/Boreas.Build.Tests.csproj
           - name: interop
             project: tests/Boreas.Interop.Tests/Boreas.Interop.Tests.csproj
           - name: ui

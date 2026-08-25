@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Boreas.Build.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <OutputType>Exe</OutputType>
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+
+    <!-- The tool under test names versions; this project does not carry one. -->
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+
+  <!--
+    A project reference to an Exe. The algebra is public and the entry point is
+    top-level statements, which the compiler puts in a class this never names,
+    so referencing the executable reaches the laws and not the shell.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="../../build/Boreas.Build.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+  </ItemGroup>
+
+</Project>

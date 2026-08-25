@@ -16,6 +16,46 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
   </PropertyGroup>
 
+  <!--
+    THE VERSION FALLBACK, AND THE PINNED CORE.
+
+    THE TAG IS THE VERSION. This is not a source; it is a fallback.
+
+    0.0.0 is a literal placeholder and is visibly not a claim. It exists so a
+    developer with no tags and no network builds something coherent, and so a
+    build carrying it is self-evidently one the release pipeline did not name.
+    Nothing in build/ ever reads it.
+
+    An earlier design declared a version here AND accepted a tag, then had a
+    law policing the disagreement. A check exists only where two sources can
+    differ. Deleting the second source makes the invariant hold by construction
+    rather than by inspection, and cutting a release stops being two acts of
+    which the one you forget is the one that fails the build.
+
+    CI passes the real values as global properties, which override this file
+    with no conditions needed:
+      dotnet build -p:Version=... -p:FileVersion=... -p:InformationalVersion=...
+
+    BoreasCoreTag pins the boreas-core release this build composes with. It
+    lives beside the version because the pair is the identity: an artefact here
+    embeds that core, so a bug report naming only one of the two maps to a range
+    rather than to a build. scripts/fetch-native.sh reads this same line, so
+    there is one pin and not two.
+  -->
+  <PropertyGroup>
+    <Version>0.0.0</Version>
+    <BoreasCoreTag>v0.1.0-dev.2026-08-25.03-35-12.ge88cbbd</BoreasCoreTag>
+
+    <!-- Where HEAD sat relative to the last release, passed by the pipeline.
+         A build that did not come from it says so rather than guessing. -->
+    <BoreasPosition Condition="'$(BoreasPosition)' == ''">local build</BoreasPosition>
+
+    <!-- .NET appends +<sha> to the informational version by default. The tag
+         already carries the commit, so the suffix would be the same fact twice
+         and would stop the string round-tripping to the tag it came from. -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
+
   <PropertyGroup>
     <!-- CS8509 and CS8524 are the switch-exhaustiveness diagnostics. They are
          errors so that adding a service state, channel state or collection

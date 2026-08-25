@@ -79,6 +79,14 @@
            Text="wintun.dll is missing for $(BoreasWintunArch). Run scripts/fetch-native.sh." />
   </Target>
 
+  <!-- What this build composed with, readable at runtime. There is no dedicated
+       attribute for "the dependency this was built against", and a file holding
+       it would be a second thing to keep in step with the pin. -->
+  <ItemGroup>
+    <AssemblyMetadata Include="BoreasCoreTag" Value="$(BoreasCoreTag)" />
+    <AssemblyMetadata Include="BoreasPosition" Value="$(BoreasPosition)" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" />

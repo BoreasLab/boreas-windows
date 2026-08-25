@@ -15,7 +15,9 @@ defect to report there rather than work around here.
 Rust service host consumed the core through `WintunDevice::from_session` and C#
 never touched a packet. That is not what is built: the C boundary is the
 interface, `api/windows.md` is written for a C# host, and `src/Boreas.Interop`
-is that host. Treat `docs/` as history until it is rewritten.
+is that host. Treat `docs/` as history until it is rewritten - except
+[docs/releasing.md](docs/releasing.md), which is current and describes the
+release scheme this repository actually runs.
 
 ## Non-Negotiable Invariants
 

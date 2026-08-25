@@ -1,0 +1,283 @@
+name: Release
+
+# Two triggers, two kinds of tag, one pipeline.
+#
+# A push to `main` cuts a **pre-release**: `dotnet run --project build` names it
+# after the patch that has not happened yet, stamped with the time and the
+# commit, and GitHub marks it pre-release so it never becomes "Latest".
+#
+# A `v*` tag pushed by hand cuts a **release**. That is the only thing a human
+# does here, and it is the whole act: THE TAG IS THE VERSION. Nothing has to be
+# bumped first, so there is no step to forget and no gate that fires when you
+# forget it. Directory.Build.props carries 0.0.0 as a fallback for a build with
+# no tag, and nothing in the pipeline reads it.
+#
+# Path filters are deliberately absent. A docs-only push does produce a
+# near-identical executable and one more pre-release, which is a cost; a filter
+# that is wrong in the other direction silently withholds a build from whoever
+# is waiting for it, which is worse.
+on:
+  push:
+    branches: [main]
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+  workflow_dispatch:
+
+# No ambient capability. Each job asks for exactly the effects it performs.
+permissions: {}
+
+# Releases QUEUE rather than cancel. A cancelled release leaves a tag with no
+# assets behind it, which is the one state a consumer cannot recover from: the
+# tag resolves, the download does not, and nothing on the page says why.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+
+jobs:
+  # What is being published, decided once so every job below agrees.
+  plan:
+    name: Name the release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      tag: ${{ steps.name.outputs.tag }}
+      version: ${{ steps.name.outputs.version }}
+      prerelease: ${{ steps.name.outputs.prerelease }}
+      informational: ${{ steps.name.outputs.informational }}
+      file: ${{ steps.name.outputs.file }}
+      assembly: ${{ steps.name.outputs.assembly }}
+      position: ${{ steps.name.outputs.position }}
+      core: ${{ steps.name.outputs.core }}
+    steps:
+      # fetch-depth: 0 because the algebra reads every release tag to find the
+      # newest, and counts commits since it. A shallow clone carries neither, so
+      # the base version would fall back to 0.0.1 on every build forever and the
+      # commit count would be wrong rather than absent.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          submodules: false
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      # **No branch here, and that is the point.** The tool reads the event from
+      # GITHUB_REF_TYPE, which GitHub already sets, and returns one of two
+      # variants; a release event with no tag is not a state it can be asked
+      # about. The only refusal is at its parser - a ref that is not a release
+      # tag never becomes a release - because the tag is the sole place a
+      # version is written and so there is nothing left to disagree with.
+      - name: Decide the tag
+        id: name
+        shell: bash
+        run: dotnet run --project build --configuration Release -- resolve | tee -a "$GITHUB_OUTPUT"
+
+  # The gate, on every release including pre-releases.
+  #
+  # ci.yml runs on the same push, but the two are independent workflows racing
+  # each other: without this, a red main would publish an artefact that whoever
+  # is downstream would install before anyone noticed.
+  gate:
+    name: Laws
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        project:
+          - tests/Boreas.Build.Tests/Boreas.Build.Tests.csproj
+          - tests/Boreas.Interop.Tests/Boreas.Interop.Tests.csproj
+          - tests/Boreas.Ui.Tests/Boreas.Ui.Tests.csproj
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          submodules: false
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Test
+        shell: bash
+        env:
+          PROJECT: ${{ matrix.project }}
+        run: dotnet test "$PROJECT" --configuration Release
+
+  # WinUI 3 builds on Windows and nowhere else.
+  build:
+    name: Build ${{ matrix.platform }}
+    needs: [plan, gate]
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      # gh attestation verify reads the provenance attached to the boreas-core
+      # release the fetch pins. Without it the fetch refuses, which is the
+      # correct failure and a confusing one to debug.
+      attestations: read
+    strategy:
+      # Every architecture's result matters on its own. Shipping one of two is
+      # worse than shipping none: the missing one fails at launch on a machine
+      # nobody tested with.
+      fail-fast: false
+      matrix:
+        include:
+          - platform: x64
+            rid: win-x64
+          - platform: ARM64
+            rid: win-arm64
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          submodules: false
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      # boreas.dll and the official signed wintun.dll, at the versions pinned in
+      # the script, with both digests and the build provenance checked on every
+      # run. The project refuses to build without them and says so by name.
+      - name: Fetch native libraries
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./scripts/fetch-native.sh
+
+      # Every version field comes from `plan`, so the two architectures cannot
+      # disagree about what they are. Command-line -p: are global properties and
+      # override Directory.Build.props with no conditions needed.
+      - name: Publish
+        shell: bash
+        env:
+          PLATFORM: ${{ matrix.platform }}
+          RID: ${{ matrix.rid }}
+          VERSION: ${{ needs.plan.outputs.informational }}
+          FILE_VERSION: ${{ needs.plan.outputs.file }}
+          ASSEMBLY_VERSION: ${{ needs.plan.outputs.assembly }}
+          POSITION: ${{ needs.plan.outputs.position }}
+        run: >-
+          dotnet publish src/Boreas.Ui/Boreas.Ui.csproj
+          --configuration Release
+          -p:Platform="$PLATFORM"
+          -p:Version="$VERSION"
+          -p:InformationalVersion="$VERSION"
+          -p:FileVersion="$FILE_VERSION"
+          -p:AssemblyVersion="$ASSEMBLY_VERSION"
+          -p:BoreasPosition="$POSITION"
+          --output "staging/$RID"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: app-${{ matrix.rid }}
+          path: staging/
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    name: Package, attest, publish
+    needs: [plan, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      # Creating the tag and the release.
+      contents: write
+      # Signing the provenance: id-token mints the OIDC token Sigstore issues a
+      # short-lived certificate against, attestations persists the result, and
+      # artifact-metadata creates the storage record it hangs from.
+      #
+      # actionlint through v1.7.7 calls artifact-metadata an unknown scope. Its
+      # list is compiled in and predates the scope; GitHub's own workflow syntax
+      # reference carries it.
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          submodules: false
+
+      - uses: actions/download-artifact@v7
+        with:
+          path: incoming
+
+      # One archive per architecture, named so a consumer renames nothing.
+      - name: Assemble
+        shell: bash
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          for rid in win-x64 win-arm64; do
+            (cd "incoming/app-$rid/$rid" && zip -qr "$GITHUB_WORKSPACE/dist/boreas-$VERSION-$rid.zip" .)
+          done
+          (cd dist && sha256sum ./* > SHA256SUMS)
+          ls -l dist
+
+      # Provenance over the archives themselves, which is what a consumer
+      # actually downloads. `gh attestation verify` then answers "was this built
+      # by that workflow, from that commit" without trusting the release page.
+      - uses: actions/attest@v4
+        with:
+          subject-path: 'dist/boreas-*.zip'
+
+      # THE PAIR A BUG REPORT HAS TO MAP TO. An artefact here embeds a pinned
+      # boreas-core release, so neither version alone identifies what ran: a
+      # report naming only the app maps to a range of cores, and one naming
+      # neither maps to nothing. The same two lines are in the about window.
+      - name: Compose the notes
+        shell: bash
+        env:
+          TAG: ${{ needs.plan.outputs.tag }}
+          POSITION: ${{ needs.plan.outputs.position }}
+          CORE: ${{ needs.plan.outputs.core }}
+          FILE_VERSION: ${{ needs.plan.outputs.file }}
+        run: |
+          set -euo pipefail
+          {
+            printf '```\n'
+            printf 'app  %s  (%s)\n' "${TAG#v}" "$POSITION"
+            printf 'core %s\n' "$CORE"
+            printf '```\n\n'
+            printf 'File version `%s`. Unsigned: see docs for what that means for a tester.\n\n' \
+              "$FILE_VERSION"
+            printf 'Verify before installing:\n\n'
+            printf '```sh\n'
+            printf 'gh attestation verify boreas-*.zip --repo %s\n' "$GITHUB_REPOSITORY"
+            printf '```\n'
+          } > notes.md
+          cat notes.md
+
+      # `gh release create` makes the tag as well, so a pre-release needs no
+      # separate push - and the tag can only ever name the commit that produced
+      # the assets attached to it.
+      #
+      # --prerelease takes its value rather than being conditionally appended,
+      # so there is no shell branch on a decision the algebra already made.
+      - name: Publish
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.plan.outputs.tag }}
+          PRERELEASE: ${{ needs.plan.outputs.prerelease }}
+          SHA: ${{ github.sha }}
+        run: >-
+          gh release create "$TAG"
+          --target "$SHA"
+          --title "$TAG"
+          --notes-file notes.md
+          --prerelease="$PRERELEASE"
+          dist/*

@@ -9,10 +9,11 @@
 # file, and changing one is a commit somebody reviews.
 #
 # WHERE THINGS COME FROM
-#   boreas.dll  BoreasLab/boreas-core, built by GitHub Actions from a commit on
-#               main and signed with build provenance. Never built here: it
-#               links BoringSSL and compiles C in ring, so it can only be built
-#               on Windows against MSVC.
+#   boreas.dll  BoreasLab/boreas-core, at the tag Directory.Build.props pins,
+#               built by GitHub Actions from a commit on main and signed with
+#               build provenance. Never built here: it links BoringSSL and
+#               compiles C in ring, so it can only be built on Windows against
+#               MSVC.
 #   wintun.dll  wintun.net, Jason A. Donenfeld's signed redistributable. "The
 #               below signed DLLs are the only supported way of distributing
 #               Wintun", so this is the only correct source and a self-build is
@@ -23,11 +24,14 @@ set -euo pipefail
 
 # --- Pinned inputs -----------------------------------------------------------
 
-# The tag, and the version the archive inside it is named for. They differ:
-# a pre-release tag carries the build stamp and the archive does not, so both
-# are recorded rather than one derived from the other.
-readonly BOREAS_TAG="v0.1.0-dev.2026-08-25.03-35-12.ge88cbbd"
-readonly BOREAS_VERSION="0.1.0"
+# THE CORE TAG IS NOT HERE. It lives in Directory.Build.props, where MSBuild
+# reads it too, and this reads it from there. One pin: the version stamped into
+# the application's about window and the archive downloaded here cannot name
+# different releases, because there is only one place either could read.
+#
+# The digests do live here. They are properties of an archive rather than of the
+# product, and the file that declares what the product is has no business
+# carrying them.
 readonly BOREAS_SHA256="885cd92deeae4b8cd43f9d2fc5d4d607b74b296a2260be5718eb86701ad8dbd7"
 readonly BOREAS_REPO="BoreasLab/boreas-core"
 
@@ -62,6 +66,20 @@ repo_root() {
 
 REPO="$(repo_root)"
 readonly REPO
+
+# The one pin, read from the file that declares it.
+BOREAS_TAG="$(sed -n 's|.*<BoreasCoreTag>\(.*\)</BoreasCoreTag>.*|\1|p' "$REPO/Directory.Build.props")"
+readonly BOREAS_TAG
+[ -n "$BOREAS_TAG" ] || die "Directory.Build.props declares no <BoreasCoreTag>."
+
+# The archive inside a release is named for the base version, not the tag: a
+# pre-release tag carries the build stamp and the archive does not. Derived
+# rather than pinned separately, so the two cannot come to name different
+# releases.
+BOREAS_VERSION="${BOREAS_TAG#v}"
+BOREAS_VERSION="${BOREAS_VERSION%%-*}"
+readonly BOREAS_VERSION
+
 readonly NATIVE="$REPO/native"
 readonly DOWNLOADS="$NATIVE/downloads"
 readonly BOREAS_DIR="$NATIVE/boreas"

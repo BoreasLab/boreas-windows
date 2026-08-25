@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!--
+      The release tag algebra, in C# rather than in YAML or PowerShell.
+
+      That is not a style preference. Every law below - the ordering, the zero
+      padding, the max over the base version, the release gate - is a statement
+      about values, and a shell has no values: it has strings and exit codes,
+      and a mistake in one is discovered when a release comes out named wrong.
+      boreas-core tried this in Python and shipped two bugs to CI in two days
+      that a type checker rejects outright.
+    -->
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Boreas.Build</RootNamespace>
+    <AssemblyName>Boreas.Build</AssemblyName>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+
+    <!--
+      This project names versions; it does not carry one. Inheriting the
+      declared <Version> would make the tool's own assembly version a thing
+      that moves when the product's does, for no reason anybody could act on.
+    -->
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <InformationalVersion>1.0.0</InformationalVersion>
+  </PropertyGroup>
+
+</Project>

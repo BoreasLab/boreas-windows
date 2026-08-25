@@ -28,6 +28,14 @@
                         <TextBlock x:Name="AppVersion" Style="{StaticResource MonoText}" />
                     </StackPanel>
 
+                    <!-- The pinned engine. A bug report naming only the app maps
+                         to a range of cores, so both are shown and both are
+                         copyable. -->
+                    <StackPanel Spacing="{StaticResource SpaceXxs}">
+                        <TextBlock Text="Boreas engine" Style="{StaticResource CaptionText}" />
+                        <TextBlock x:Name="CoreVersion" Style="{StaticResource MonoText}" />
+                    </StackPanel>
+
                     <StackPanel Spacing="{StaticResource SpaceXxs}">
                         <TextBlock Text="Control protocol" Style="{StaticResource CaptionText}" />
                         <TextBlock x:Name="ProtocolVersion" Style="{StaticResource MonoText}" />

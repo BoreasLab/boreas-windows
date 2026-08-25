@@ -116,6 +116,11 @@ public sealed class DiagnosticsViewModel : ObservableObject, IDisposable
         text.AppendLine($"Copied {DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss zzz}");
         text.AppendLine();
 
+        // First, because a report that does not say which build produced it
+        // maps to a range rather than to one artefact.
+        text.AppendLine(BuildIdentity.Read(typeof(DiagnosticsViewModel).Assembly).ToString());
+        text.AppendLine();
+
         foreach (var row in Events.ItemsOrEmpty)
         {
             text.Append(row.Timestamp);
