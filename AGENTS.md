@@ -119,6 +119,63 @@ the agents discover automatically beats a location no agent may write to.
 - Never put credentials, packet payloads, keys, or unrestricted diagnostic logs
   anywhere a user or a support bundle can read them.
 
+## Comments
+
+**A comment earns its place only by saying something the code cannot say about
+itself.** Code already states what it does. Four things it cannot state, and
+they are the only reasons to write one:
+
+1. Why this, and not the obvious alternative a reader would otherwise try.
+2. An invariant the types do not enforce.
+3. What breaks if you change this: marshalling, struct layout, calling
+   convention, handle lifetime, disposal order.
+4. A reference out: a Win32 API, an error code, a compiler error ID, a header.
+
+Everything else restates the code. Do not write it, and delete it when you find
+it: no comment that narrates the line below it, no `<summary>` that spells out
+the member name, no `<param>` that repeats the parameter, no history of what the
+file used to be. Git holds the history, and a file that carries its own
+changelog grows one forever.
+
+In interop code the third reason carries most of the value. A note that a field
+holds a fixed width because `boreas.h` pins it is knowledge the C# cannot
+express. Those are the comments to protect and the ones to write.
+
+**Write plain technical English, not essay prose.** This guide is written in a
+register that suits a guide: an aphorism, a contrast, a claim landed on a short
+sentence. **Comments do not get that register**, and imitating it here is the
+most common way this rule is broken. No "X is the Y of Z", no "which is the
+problem P exists to work around rather than a thing to create", no "the real
+question is", no fact trailed by a participial flourish. Name the mechanism and
+stop. Prefer a colon or a full stop to a dash, keep at most one dash in a block,
+and do not use `<b>` to make an ordinary sentence sound urgent: a sentence that
+needs bold to land is the wrong sentence.
+
+A `<remarks>` block states one fact. If it runs past a short paragraph, the fact
+is in there somewhere and the rest is packaging. Most two-`<para>` blocks in this
+repository should be one paragraph or none.
+
+**Economy, not telegraphese.** Cut "in order to", "it is important to note
+that", "has the ability to", stacked hedges, and any sentence announcing the one
+after it. Keep articles and whole sentences: XML docs surface in IntelliSense for
+every caller, and `/// <summary>Quad. Four WORDs.</summary>` is not an
+improvement on the sentence it replaced.
+
+**Never delete, and edit only with the change it describes:**
+
+- Any note on marshalling, layout, calling convention, blittability, pinning, or
+  handle lifetime.
+- Any note citing a compiler error ID, a Win32 error, or a boundary that was
+  measured rather than assumed.
+- The reason on a `#pragma warning disable` or a `[SuppressMessage]`.
+- `TODO`, `FIXME`, `HACK`, and anything carrying an issue ID.
+- The text inside `cref=` or `name=`. Those resolve to symbols, and a wrong one
+  is CS1574 or CS1734. Deleting the whole sentence is fine.
+
+**XML docs compile.** Close every tag you open. A dangling `<para>` or `<b>`
+fails the build, and `<WarningsAsErrors>` here already includes `CS8509` and
+`CS8524`, so introduce no new warning either.
+
 ## Change Process
 
 1. Read the `api/` page that owns the boundary you are changing.
