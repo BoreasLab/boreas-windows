@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Boreas.Interop.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+
+    <OutputType>Exe</OutputType>
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+
+    <!-- sizeof over the ABI structs, and taking the address of a field to
+         measure where it actually sits. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <!--
+    A project reference, not a source include. Boreas.Ui.Tests compiles the
+    functional core from source because the point there is to prove those files
+    never touch Microsoft.UI. The point here is the opposite: these laws must
+    observe the assembly as the runtime lays it out, because the layout is the
+    thing under test.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="../../src/Boreas.Interop/Boreas.Interop.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+  </ItemGroup>
+
+</Project>

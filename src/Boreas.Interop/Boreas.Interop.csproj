@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!--
+      Plain net10.0, not net10.0-windows, and that is deliberate.
+
+      Nothing here needs the Windows targeting pack. The ABI is blittable
+      structs and function pointers, and the two Windows-only surfaces this
+      assembly eventually touches (DPAPI and the ROOT certificate store) ship
+      in platform-neutral assemblies that throw off Windows rather than failing
+      to resolve.
+
+      What the neutral target buys is that every layout law in
+      Boreas.Interop.Tests runs on whatever machine builds the repository. The
+      layout laws are the entire defence against the three marshalling traps in
+      api/windows.md#three-type-rules, and a test that can only run on the
+      platform where the bug is expensive is not a defence.
+
+      [SupportedOSPlatform("windows")] marks the runtime-Windows types, so
+      CA1416 still reports a caller that ignores one.
+    -->
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Boreas.Interop</RootNamespace>
+    <IsPackable>false</IsPackable>
+
+    <!--
+      Pointer parameters, function pointers, and sizeof over the ABI structs.
+      The unsafe boundary is the reason this assembly exists; confining the
+      flag here is what keeps every project above it safe.
+    -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+</Project>
