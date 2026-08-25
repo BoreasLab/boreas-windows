@@ -66,3 +66,9 @@ Thumbs.db
 # Local tooling installed outside the repository's own dependency set.
 .dotnet/
 .tools/
+
+# Native libraries fetched by scripts/fetch-native.sh at the versions pinned in
+# it. Not in history: boreas.dll is 13 MB per architecture, it is reproducible
+# from the pinned tag, and a binary committed here is one nobody can check the
+# provenance of afterwards.
+native/

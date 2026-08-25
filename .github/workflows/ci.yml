@@ -114,6 +114,10 @@ jobs:
     timeout-minutes: 25
     permissions:
       contents: read
+      # gh attestation verify reads the build provenance attached to the
+      # boreas-core release. Without this the fetch refuses, which is the
+      # correct failure and a confusing one to debug.
+      attestations: read
     strategy:
       # Every cell's result matters on its own. Cancelling the arm64 build
       # because x64 broke turns "which targets build" into "one target broke".
@@ -152,6 +156,18 @@ jobs:
       # value spliced into a run: block is evaluated as script, and that is a
       # habit worth not having when the next value comes from an event
       # payload. One shell across every job, so there is one quoting rule.
+      # Before restore, because the project refuses to build without them and
+      # says so by name. api/artifacts.md: an artefact fetched on every build is
+      # a supply-chain edge, and provenance is the check that guards it - "do
+      # this in CI, not just once by hand". The script does both checks on every
+      # run, so a cached archive is never trusted on the strength of a check
+      # that happened somewhere else.
+      - name: Fetch native libraries
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./scripts/fetch-native.sh
+
       - name: Restore
         shell: bash
         env:

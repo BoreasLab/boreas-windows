@@ -39,6 +39,46 @@
     <RuntimeIdentifier>win-$(BoreasPlatform.ToLowerInvariant())</RuntimeIdentifier>
   </PropertyGroup>
 
+  <!--
+    The two native libraries, at the versions scripts/fetch-native.sh pins.
+
+    Referenced from where that script extracted them, never copied into the
+    tree: boreas.dll is thirteen megabytes per architecture, it is reproducible
+    from a pinned tag, and a binary committed here is one whose provenance
+    nobody can check afterwards.
+
+    One knob again. BoreasPlatform already decides the runtime identifier, and
+    it decides these too, so the architecture is stated once. The two vendors
+    spell it differently - .NET says win-x64 and Wintun's archive says amd64 -
+    and that translation lives here rather than in a build command somebody has
+    to remember.
+  -->
+  <PropertyGroup>
+    <BoreasNativeRoot>$(MSBuildThisFileDirectory)..\..\native\</BoreasNativeRoot>
+    <BoreasWintunArch Condition="'$(BoreasPlatform)' == 'x64'">amd64</BoreasWintunArch>
+    <BoreasWintunArch Condition="'$(BoreasWintunArch)' == ''">$(BoreasPlatform.ToLowerInvariant())</BoreasWintunArch>
+    <BoreasDll>$(BoreasNativeRoot)boreas\runtimes\$(RuntimeIdentifier)\native\boreas.dll</BoreasDll>
+    <WintunDll>$(BoreasNativeRoot)wintun\bin\$(BoreasWintunArch)\wintun.dll</WintunDll>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="$(BoreasDll)" Link="boreas.dll" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+    <None Include="$(WintunDll)" Link="wintun.dll" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+  </ItemGroup>
+
+  <!--
+    A missing native library is a runtime failure on a machine nobody is
+    watching, and the message it produces names a DLL rather than the step that
+    was skipped. Failing the build instead costs one condition and names the
+    command.
+  -->
+  <Target Name="BoreasRequireNativeLibraries" BeforeTargets="Build">
+    <Error Condition="!Exists('$(BoreasDll)')"
+           Text="boreas.dll is missing for $(RuntimeIdentifier). Run scripts/fetch-native.sh, which downloads it at the pinned tag and verifies its build provenance." />
+    <Error Condition="!Exists('$(WintunDll)')"
+           Text="wintun.dll is missing for $(BoreasWintunArch). Run scripts/fetch-native.sh." />
+  </Target>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" />
