@@ -88,7 +88,7 @@ public sealed class ConfigurationViewModel : ObservableObject
     /// <summary>The route values in selector order.</summary>
     public static readonly RouteMode[] RouteOrder = [RouteMode.Default, RouteMode.Selected];
 
-    public static readonly EgressPolicy[] EgressOrder = [EgressPolicy.Direct, EgressPolicy.Relay];
+    public static readonly EgressPolicy[] EgressOrder = [EgressPolicy.Direct, EgressPolicy.WireGuard];
 
     public int RouteIndex
     {

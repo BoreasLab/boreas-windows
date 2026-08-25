@@ -36,6 +36,10 @@ public sealed class WintunRing : IPacketRing
     private readonly ManualResetEvent _quit = new(false);
     private readonly WaitHandle[] _waits;
     private long _oversizedDropped;
+    private long _packetsIn;
+    private long _packetsOut;
+    private long _bytesIn;
+    private long _bytesOut;
 
     private WintunRing(WintunAdapterHandle adapter, WintunSessionHandle session, ushort mtu)
     {
@@ -74,6 +78,38 @@ public sealed class WintunRing : IPacketRing
     /// that is diagnosed by guesswork.
     /// </remarks>
     public long OversizedDropped => Interlocked.Read(ref _oversizedDropped);
+
+    /// <summary>Packets read from the adapter since the session started.</summary>
+    /// <remarks>
+    /// <para>
+    /// The ABI reports no traffic counters: every field of <c>BoreasCounters</c>
+    /// is a thing that went wrong or was refused, which is the right surface
+    /// for a core and the wrong one for a status page that has to show a tunnel
+    /// is doing something. The ring is where every packet actually crosses, so
+    /// it is the one place these can be counted without inventing a second
+    /// datapath to count them on.
+    /// </para>
+    /// <para>
+    /// Interlocked rather than plain increments. The ABI serialises recv with
+    /// itself and send with itself, but not to a fixed thread, so a plain
+    /// increment would rely on the core's internal synchronisation publishing
+    /// the write - which the ABI never promises. Two interlocked operations per
+    /// packet per direction, against a packet rate that is bounded by the link:
+    /// at a gigabit and 1420-byte packets that is under a hundred thousand a
+    /// second, and each one is a handful of nanoseconds. Unmeasured, and stated
+    /// as reasoning rather than as a benchmark.
+    /// </para>
+    /// </remarks>
+    public long PacketsIn => Interlocked.Read(ref _packetsIn);
+
+    /// <summary>Packets written to the adapter since the session started.</summary>
+    public long PacketsOut => Interlocked.Read(ref _packetsOut);
+
+    /// <summary>Bytes read from the adapter since the session started.</summary>
+    public long BytesIn => Interlocked.Read(ref _bytesIn);
+
+    /// <summary>Bytes written to the adapter since the session started.</summary>
+    public long BytesOut => Interlocked.Read(ref _bytesOut);
 
     /// <summary>
     /// Creates the adapter and starts a session on it.
@@ -127,6 +163,10 @@ public sealed class WintunRing : IPacketRing
                 }
 
                 new ReadOnlySpan<byte>((void*)packet, (int)size).CopyTo(destination);
+
+                Interlocked.Increment(ref _packetsIn);
+                Interlocked.Add(ref _bytesIn, size);
+
                 return (int)size;
             }
             finally
@@ -171,6 +211,9 @@ public sealed class WintunRing : IPacketRing
 
         packet.CopyTo(new Span<byte>((void*)buffer, packet.Length));
         Wintun.WintunSendPacket(_session, buffer);
+
+        Interlocked.Increment(ref _packetsOut);
+        Interlocked.Add(ref _bytesOut, packet.Length);
 
         return 0;
     }

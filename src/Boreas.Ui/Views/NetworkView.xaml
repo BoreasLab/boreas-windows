@@ -101,7 +101,7 @@
                 <RadioButtons Header="How Boreas reaches the network"
                               SelectedIndex="{x:Bind ViewModel.EgressIndex, Mode=TwoWay}">
                     <RadioButton Content="Directly" />
-                    <RadioButton Content="Through a relay" />
+                    <RadioButton Content="Through a WireGuard peer" />
                 </RadioButtons>
             </StackPanel>
 

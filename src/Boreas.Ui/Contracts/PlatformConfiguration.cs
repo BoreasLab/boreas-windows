@@ -27,11 +27,24 @@ public enum RouteMode
     Selected,
 }
 
-/// <summary>The core's egress choice. The host only has to make it reachable.</summary>
+/// <summary>
+/// The core's egress choice. The host only has to make it reachable.
+/// </summary>
+/// <remarks>
+/// Two arms, and this is the whole set the C ABI exposes. api/abi.md lists
+/// SOCKS5, Shadowsocks, VLESS and Hysteria2 as reachable from the Rust API and
+/// <b>not yet exposed</b> across the C boundary, so a third choice here would
+/// be an option a user could pick and the service could not honour. The
+/// previous spelling of the second arm - "Relay" - named no egress the ABI has;
+/// WireGuard is the one it actually offers.
+/// </remarks>
 public enum EgressPolicy
 {
+    /// <summary>Out by the host's own routes. Nothing is proxied.</summary>
     Direct,
-    Relay,
+
+    /// <summary>A WireGuard peer, carrying whole IP packets.</summary>
+    WireGuard,
 }
 
 /// <summary>

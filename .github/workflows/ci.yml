@@ -2,12 +2,19 @@
 #
 # Two effect domains, so two jobs.
 #
-#   core  ubuntu, cheap. Builds and runs the OS-independent laws: the state
-#         machine the interface renders, the form's parser, and the design
-#         system measured out of the XAML. Also the boundary check: the test
-#         project targets plain net10.0 and compiles the functional core from
-#         source, so a Microsoft.UI reference creeping into Contracts,
-#         Presentation or the channel abstraction fails here.
+#   core  ubuntu, cheap. Builds and runs the OS-independent laws: the ABI's
+#         layout and widths, both vtables' obligations, the configuration
+#         lowering, the state machine the interface renders, the form's parser,
+#         and the design system measured out of the XAML. Also the boundary
+#         check: both test projects target plain net10.0, and the UI one
+#         compiles the functional core from source, so a Microsoft.UI reference
+#         creeping into Contracts, Presentation or either channel fails here.
+#
+#         The interop laws belong on Linux and not on the Windows job, which is
+#         the point of them: a layout assertion that only runs where the bug is
+#         expensive is not a defence. boreas.dll is never loaded here - nothing
+#         in those laws calls it - so they cost a Linux runner and catch the
+#         three marshalling traps before any hardware is involved.
 #
 #   app   windows, the only place WinUI 3 builds. Produces the artifact.
 #
@@ -47,11 +54,22 @@ env:
 
 jobs:
   core:
-    name: Core laws
+    name: Core laws (${{ matrix.name }})
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: read
+    strategy:
+      # Each suite's result matters on its own: a layout law failing and a
+      # presentation law failing are different problems with different owners,
+      # and one cancelling the other turns two answers into one.
+      fail-fast: false
+      matrix:
+        include:
+          - name: interop
+            project: tests/Boreas.Interop.Tests/Boreas.Interop.Tests.csproj
+          - name: ui
+            project: tests/Boreas.Ui.Tests/Boreas.Ui.Tests.csproj
     steps:
       - uses: actions/checkout@v7
         with:
@@ -70,13 +88,15 @@ jobs:
       # Directory.Packages.props.
       - name: Restore
         shell: bash
-        run: dotnet restore tests/Boreas.Ui.Tests/Boreas.Ui.Tests.csproj
+        env:
+          PROJECT: ${{ matrix.project }}
+        run: dotnet restore "$PROJECT"
 
       - name: Build
         shell: bash
-        run: >-
-          dotnet build tests/Boreas.Ui.Tests/Boreas.Ui.Tests.csproj
-          --configuration Release --no-restore
+        env:
+          PROJECT: ${{ matrix.project }}
+        run: dotnet build "$PROJECT" --configuration Release --no-restore
 
       # No --logger: that is a VSTest option, and xunit v3 runs on Microsoft
       # Testing Platform. A TRX report would mean adding the TRX extension
@@ -84,9 +104,9 @@ jobs:
       # is where anyone reading a red build looks first.
       - name: Test
         shell: bash
-        run: >-
-          dotnet test tests/Boreas.Ui.Tests/Boreas.Ui.Tests.csproj
-          --configuration Release --no-build
+        env:
+          PROJECT: ${{ matrix.project }}
+        run: dotnet test "$PROJECT" --configuration Release --no-build
 
   app:
     name: App (${{ matrix.configuration }}, ${{ matrix.platform }})

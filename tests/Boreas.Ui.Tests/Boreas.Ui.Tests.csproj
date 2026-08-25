@@ -33,6 +33,29 @@
     <Compile Include="../../src/Boreas.Ui/Presentation/**/*.cs" LinkBase="Core/Presentation" />
     <Compile Include="../../src/Boreas.Ui/Services/IControlChannel.cs" Link="Core/Services/IControlChannel.cs" />
     <Compile Include="../../src/Boreas.Ui/Services/UnimplementedControlChannel.cs" Link="Core/Services/UnimplementedControlChannel.cs" />
+
+    <!--
+      NativeControlChannel is here for the same reason as everything above it,
+      and it is the strongest case for the rule. It drives a real Boreas tunnel,
+      so the temptation is to call it untestable and leave it in the shell. It
+      is testable exactly because it owes nothing to Microsoft.UI: the operating
+      system is behind ITunnelHost and the UI thread is behind an injected
+      posting delegate, which leaves a state machine. Compiling it against a
+      framework where DispatcherQueue does not exist is what keeps it that way.
+
+      WintunTunnelHost is the other side of that seam. It is compiled here and
+      never exercised, and the difference matters: nothing in it can run without
+      a Wintun driver, but everything in it can be type-checked, and a host that
+      does not compile is a worse thing to discover on a device than one that
+      does not work.
+    -->
+    <Compile Include="../../src/Boreas.Ui/Services/TunnelHost.cs" Link="Core/Services/TunnelHost.cs" />
+    <Compile Include="../../src/Boreas.Ui/Services/NativeControlChannel.cs" Link="Core/Services/NativeControlChannel.cs" />
+    <Compile Include="../../src/Boreas.Ui/Services/WintunTunnelHost.cs" Link="Core/Services/WintunTunnelHost.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Boreas.Interop/Boreas.Interop.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -44,6 +44,12 @@
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" />
   </ItemGroup>
 
+  <!-- The C ABI, the two vtables, and the tunnel lifecycle. Targets plain
+       net10.0 so its layout laws run wherever this repository builds. -->
+  <ItemGroup>
+    <ProjectReference Include="../Boreas.Interop/Boreas.Interop.csproj" />
+  </ItemGroup>
+
   <ItemGroup>
     <None Update="Design\*.xaml">
       <Generator>MSBuild:Compile</Generator>
