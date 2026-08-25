@@ -142,9 +142,8 @@ public sealed record InterceptHosts
 /// Terminating TLS for a readable allowlist of hosts, and what to do inside.
 /// </summary>
 /// <remarks>
-/// Document rewriting lives here rather than beside it, so asking for it
-/// without interception is not something that can be written down. The nesting
-/// is the chain.
+/// Nesting document rewriting here makes it impossible to request rewriting
+/// without interception.
 /// </remarks>
 public sealed record Interception(InterceptHosts Hosts, Trust Trust, bool RewriteDocuments);
 
@@ -205,13 +204,11 @@ public abstract record Resolution
 }
 
 /// <summary>
-/// How much this tunnel may hold. Every zero means "use the default for it",
-/// so <c>default</c> is the phone-sized defaults throughout.
+/// Resource ceilings. Zero selects the core default for that ceiling.
 /// </summary>
 /// <remarks>
-/// These are about the device, which is why the host sets them: a phone and a
-/// desktop differ by an order of magnitude and the core cannot tell which it is
-/// on. <see cref="Desktop"/> is this product's answer for the one it runs on.
+/// The host supplies these because the core cannot identify whether it runs on
+/// a phone or desktop. <see cref="Desktop"/> is the product's desktop profile.
 /// </remarks>
 public readonly record struct Ceilings(
     nuint BufferSlices = 0,
@@ -253,9 +250,6 @@ public readonly record struct Ceilings(
     };
 }
 
-/// <summary>
-/// One tunnel, described completely.
-/// </summary>
 /// <remarks>
 /// <para>
 /// api/abi.md lists ten combinations that produce BOREAS_CONFIG. Six of them
@@ -267,10 +261,6 @@ public readonly record struct Ceilings(
 /// <see cref="Mtu"/>, <see cref="HostPort"/> and <see cref="Hostname"/>, which
 /// reject with a sentence naming the field rather than with a status code the
 /// caller has to bisect.
-/// </para>
-/// <para>
-/// That is the whole reason this type exists rather than a
-/// <see cref="BoreasConfig"/> filled in at the call site.
 /// </para>
 /// </remarks>
 public sealed record TunnelConfiguration(

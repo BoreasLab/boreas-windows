@@ -26,7 +26,6 @@ public enum BoreasNat
     AddressAndPortDependent = 2,
 }
 
-/// <summary>Which arm of <see cref="BoreasEvent"/> carries meaning.</summary>
 public enum BoreasEventKind
 {
     Resolved = 0,
@@ -172,9 +171,6 @@ public struct BoreasWireGuard
 
     public BoreasKey PresharedKey;
 
-    /// <summary>
-    /// Whether <see cref="PresharedKey"/> carries one.
-    /// </summary>
     /// <remarks>
     /// A separate flag because thirty-two zero bytes is a key somebody may
     /// legitimately have configured, so "all zero" cannot mean "absent".

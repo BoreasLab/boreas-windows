@@ -7,9 +7,8 @@ namespace Boreas.Build.Tests;
 /// wrong without it.
 /// </summary>
 /// <remarks>
-/// Laws rather than examples. A happy-path test here would pass against an
-/// implementation that reverses two builds an hour apart, sorts a numeric
-/// commit below its siblings, or lets the version climb with commit volume.
+/// These laws catch reversed builds, numeric commits sorted below their
+/// siblings, and versions that climb with commit volume.
 /// </remarks>
 public sealed class ReleaseLaws
 {
@@ -215,10 +214,8 @@ public sealed class ReleaseLaws
     // ------------------------------------------------- law 4: the base version
 
     /// <summary>
-    /// <b>One operand.</b> The next pre-release heads for the patch above the
-    /// newest release, and nothing else is consulted. An earlier design took a
-    /// max against a version declared in a committed file; deleting that second
-    /// source is what removed the check policing their disagreement.
+    /// The next pre-release heads for the patch above the newest release. The
+    /// tag set is the only source, so there is no second version to disagree.
     /// </summary>
     [Fact]
     public void The_base_version_is_the_patch_above_the_newest_release()
@@ -233,8 +230,8 @@ public sealed class ReleaseLaws
     /// <summary>
     /// A repository that has never shipped heads for 0.0.1, which is
     /// <see cref="ReleaseVersion.Origin"/>'s successor. The anchor tag v0.0.0
-    /// this repository carries means the case never arises in practice, and the
-    /// law is stated anyway because the fold has to be total without it.
+    /// means the case is unusual here, but the fold must remain total without
+    /// any release tags.
     /// </summary>
     [Fact]
     public void A_repository_that_has_never_shipped_heads_for_the_first_patch()
@@ -244,9 +241,8 @@ public sealed class ReleaseLaws
     }
 
     /// <summary>
-    /// <b>Pre-release tags do not participate.</b> Counting them would make the
-    /// version climb with commit volume rather than with intent - a busy week
-    /// would ship 0.9.0 without anybody deciding to.
+    /// Pre-release tags do not raise the base version. Counting them would make
+    /// the version track commit volume rather than release intent.
     /// </summary>
     [Fact]
     public void A_pre_release_tag_never_raises_the_base_version()
@@ -261,8 +257,7 @@ public sealed class ReleaseLaws
     }
 
     /// <summary>
-    /// A minor is cut by tagging a minor. There is no second place to say so and
-    /// therefore no second place for it to be forgotten.
+    /// A minor is cut by tagging that minor.
     /// </summary>
     [Fact]
     public void The_way_to_cut_a_minor_is_to_tag_one()
@@ -274,10 +269,8 @@ public sealed class ReleaseLaws
     // ------------------------------------------ the algebra is total
 
     /// <summary>
-    /// <b>Resolve cannot fail.</b> There is no error type and nothing to throw,
-    /// because the one untrusted string became a value at the boundary that
-    /// received it. If this ever needs a <c>Result</c>, a second source has come
-    /// back.
+    /// Resolve cannot fail: the untrusted string becomes a value at the parser
+    /// boundary, before this fold receives it.
     /// </summary>
     [Fact]
     public void Resolve_is_total_over_every_tag_set()

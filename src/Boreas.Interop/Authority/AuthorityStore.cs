@@ -9,21 +9,11 @@ namespace Boreas.Interop.Authority;
 /// The one thing that is persisted, and the only thing.
 /// </summary>
 /// <remarks>
-/// <para>
-/// Durable state is what cannot be relearned cheaply and correctly, and by that
-/// test there is one item: a user approved a root through a system dialog,
-/// physically, once, and nothing in the process can reconstitute that approval.
-/// Everything else the core learns is a cache with a lifetime already on it, and
-/// a stale one silently withholds filtering from a site that has since become
-/// interceptable - which is worse than relearning, and is discovered years
-/// later.
-/// </para>
-/// <para>
-/// <b>Store and offer unconditionally, every launch.</b> Storing what was just
-/// restored is a no-op write and offering a root the user already trusts shows
-/// no dialog, so there is no branch here to get wrong - and a branch is what
-/// would eventually get it wrong.
-/// </para>
+/// A user's one-time approval of a root through the system dialog cannot be
+/// reconstituted by the process. Other core state is cacheable, and stale cache
+/// data can silently suppress filtering, so it is cheaper to relearn it.
+/// Store and offer the authority on every launch: restoring and storing is a
+/// no-op, and offering an already trusted root shows no dialog.
 /// </remarks>
 [SupportedOSPlatform("windows")]
 public sealed class AuthorityStore
@@ -92,11 +82,10 @@ public sealed class AuthorityStore
     /// Writes both halves, or neither.
     /// </summary>
     /// <remarks>
-    /// A temporary file and a rename, because a rename within one directory is
-    /// the closest thing the filesystem offers to an atomic publish. Writing in
-    /// place would leave a window in which the file holds a prefix of the new
-    /// material, and a prefix decodes as nothing - which is recoverable - or, if
-    /// the lengths happened to line up, as the wrong material, which is not.
+    /// Write a temporary file and rename it within the same directory, the
+    /// filesystem's closest atomic publish. An in-place write can expose a
+    /// prefix that either fails to decode or, if lengths happen to align,
+    /// decodes as the wrong material.
     /// </remarks>
     public void Save(AuthorityMaterial material)
     {

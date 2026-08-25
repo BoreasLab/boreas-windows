@@ -192,7 +192,6 @@ public sealed class ConfigurationViewModel : ObservableObject
         RaiseAll();
     }
 
-    /// <summary>Marks a field finished when it loses focus.</summary>
     public void MarkTouched(ConfigField field)
     {
         Finish(field);
@@ -229,9 +228,6 @@ public sealed class ConfigurationViewModel : ObservableObject
         Routes: Routes,
         Egress: Egress);
 
-    /// <summary>
-    /// Records the current validation result for a finished field.
-    /// </summary>
     /// <remarks>
     /// Validation rules and messages remain owned by the refined types.
     /// </remarks>
@@ -240,9 +236,6 @@ public sealed class ConfigurationViewModel : ObservableObject
             ? new FieldState.Rejected(message)
             : FieldState.Accepted.Instance;
 
-    /// <summary>
-    /// Places parser or service messages on their fields.
-    /// </summary>
     /// <remarks>
     /// A rejection state also records that the field was finished.
     /// </remarks>
@@ -254,15 +247,11 @@ public sealed class ConfigurationViewModel : ObservableObject
         }
     }
 
-    /// <summary>Resets every field to untouched.</summary>
     private void Forget() => Array.Fill(_fields, FieldState.Untouched.Instance);
 
     private string? MessageFor(ConfigField field) =>
         _fields[Position(field)] is FieldState.Rejected rejected ? rejected.Message : null;
 
-    /// <summary>
-    /// Returns the array index for a field.
-    /// </summary>
     /// <remarks>
     /// Direct indexing depends on dense enum values; the law test guards the
     /// ordering, and this check keeps an out-of-domain value explicit.
@@ -330,7 +319,6 @@ public sealed class ConfigurationViewModel : ObservableObject
         /// <summary>The user has not finished with it, so the form says nothing.</summary>
         public sealed record Untouched : FieldState
         {
-            /// <summary>Shared because the state carries no data.</summary>
             public static readonly Untouched Instance = new();
         }
 

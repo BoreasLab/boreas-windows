@@ -49,9 +49,6 @@ internal static partial class UnicastInterface
     /// </summary>
     public static int IPv6Value(uint index) => (int)index;
 
-    /// <summary>
-    /// Sets both options on one socket.
-    /// </summary>
     /// <returns>Zero when the socket is bound to the interface, negative when it is not.</returns>
     /// <remarks>
     /// <para>

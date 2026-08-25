@@ -174,9 +174,6 @@ public sealed unsafe class NativeTunnel : IDisposable
         return new NativeTunnel(handle, onEvent, onEnded);
     }
 
-    /// <summary>
-    /// Compares the header's version against the library's.
-    /// </summary>
     public static void RequireMatchingAbi()
     {
         var loaded = Boreas.Interop.Native.Boreas.boreas_abi_version();
@@ -191,22 +188,10 @@ public sealed unsafe class NativeTunnel : IDisposable
     /// Replaces the rules in force, without restarting or dropping a connection.
     /// </summary>
     /// <remarks>
-    /// <para>
-    /// A whole list set, never a delta. A rebuild compiles a fresh index and
-    /// publishes it in one write, so every query is decided against exactly one
-    /// version; applying edits incrementally would make "which rules did this
-    /// query see" a question with no answer.
-    /// </para>
-    /// <para>
-    /// <b>The same reload is reported twice</b> - once here and once on the
-    /// event stream - and they describe one reload. Drive a UI from the stream,
-    /// which is also where a reload triggered elsewhere arrives; the value
-    /// returned here is for a caller that wants the answer synchronously.
-    /// </para>
-    /// <para>
-    /// Safe to call while the reader is blocked, which is the case that
-    /// matters, because that reader may be blocked for a very long time.
-    /// </para>
+    /// Reload replaces the complete rule set, publishing one index so every
+    /// query sees one version. The reload is returned here and reported on the
+    /// event stream; use the stream for UI state, including reloads triggered
+    /// elsewhere. It is safe while the reader is blocked.
     /// </remarks>
     public TunnelEvent.Reloaded Reload(IReadOnlyCollection<string> lists)
     {

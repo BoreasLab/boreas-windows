@@ -6,23 +6,20 @@ namespace Boreas.Build;
 /// A Win32 <c>VERSIONINFO</c> quad: four <c>WORD</c> fields.
 /// </summary>
 /// <remarks>
-/// <b>Nothing else enforces this range.</b> The compiler range-checks assembly
-/// identity and does not check a file version at all:
-/// <c>-p:FileVersion=65536.0.0.0</c> builds without complaint. Whatever happens
-/// to the extra bits happens silently in the resource, so
-/// <see cref="TryCreate"/> is the only place a value that will not fit is
-/// refused.
+/// C# checks assembly identity ranges but not file-version ranges:
+/// <c>-p:FileVersion=65536.0.0.0</c> builds without complaint. The resource can
+/// silently lose the extra bits, so <see cref="TryCreate"/> rejects values that
+/// do not fit.
 /// </remarks>
 public readonly record struct WindowsVersion : IComparable<WindowsVersion>
 {
     /// <summary>
-    /// Each field is a <c>WORD</c>, and a <c>WORD</c> reserves nothing.
+    /// Each field is a <c>WORD</c> with no reserved value.
     /// </summary>
     /// <remarks>
-    /// One below this is <see cref="AssemblyIdentityVersion.MaxField"/>, and the
-    /// difference is not a quirk - see that type for why a name reserves a value
-    /// and a label does not. The two ceilings live on two types precisely so
-    /// that neither can be reached for where the other belongs.
+    /// <see cref="AssemblyIdentityVersion.MaxField"/> is one lower because an
+    /// assembly identity reserves a value for an unspecified component. The
+    /// separate ceilings prevent applying that rule to a file version.
     /// </remarks>
     public const int MaxField = ushort.MaxValue;
 
@@ -133,50 +130,41 @@ public readonly record struct AssemblyIdentityVersion
 /// assembly carries.
 /// </summary>
 /// <remarks>
-/// <para>
-/// <b>Separate from the algebra on purpose.</b> The tag scheme is a statement
-/// about what is being published; this is a statement about how one particular
-/// distribution format wants to hear it. They change for different reasons, and
-/// keeping them apart means a change of format costs this file and no
-/// retesting of the laws.
-/// </para>
-/// <para>
-/// <b>The distribution format today is an unpackaged .exe.</b>
+/// The tag algebra says what is being published; this class maps it to the
+/// current distribution format, an unpackaged .exe. Keeping those rules here
+/// lets a format change avoid retesting the tag laws.
+///
 /// <c>Boreas.Ui.csproj</c> sets <c>WindowsPackageType=None</c> with
 /// <c>OutputType=WinExe</c>, there is no <c>.appxmanifest</c> in the tree and no
 /// installer project, so nothing compares these numbers to decide an upgrade.
 /// They are what a user sees in the file properties dialog and what a crash
 /// dump carries.
-/// </para>
-/// <para>
-/// <b>Both installer formats would refuse this encoding, and both were
-/// checked.</b> Windows Installer: "The first field is the major version and
+///
+/// Both installer formats would refuse this encoding. Windows Installer: "The
+/// first field is the major version and
 /// has a maximum value of 255. The second field is the minor version and has a
 /// maximum value of 255… Note that Windows Installer uses only the first three
 /// fields of the product version. If you include a fourth field in your product
 /// version, the installer ignores the fourth field." So an MSI would discard
 /// <c>Revision</c> outright and every pre-release of one patch would compare
-/// equal - the upgrade from one nightly to the next would simply not happen.
+/// equal, so the upgrade from one nightly to the next would not happen.
 /// MSIX is the mirror image: "the last (fourth) section of the version number is
 /// reserved for Store use and must be left as 0… (except for the first section,
 /// which cannot be 0)", which forbids both the field this uses and this
-/// product's major version. <b>Neither format can carry this scheme, so
-/// choosing one is a decision that changes this file</b> - most likely by moving
-/// the counter into <see cref="WindowsVersion.Build"/> and the triple's patch
-/// elsewhere.
-/// </para>
+/// product's major version. Neither format can carry this scheme; choosing one
+/// would require moving the counter into <see cref="WindowsVersion.Build"/>
+/// and the triple's patch elsewhere.
 /// </remarks>
 public static class Rendering
 {
     /// <summary>
-    /// The revision a release carries: the field's maximum, so that a release
-    /// sorts above every pre-release that preceded it.
+    /// The maximum field value, so a release sorts above every preceding
+    /// pre-release.
     /// </summary>
     /// <remarks>
-    /// Pre-releases of version V share V's triple, so the release of V must be
-    /// distinguished in the fourth field alone. Giving it the maximum is the
-    /// only assignment that holds however many pre-releases came first, and
-    /// without knowing how many that will be.
+    /// Pre-releases of version V share V's triple, so the release must use the
+    /// fourth field. The maximum remains greater than any number of preceding
+    /// pre-releases without requiring their count in advance.
     /// </remarks>
     public const int ReleaseRevision = WindowsVersion.MaxField;
 
@@ -196,9 +184,7 @@ public static class Rendering
         {
             Publish.Release => ReleaseRevision,
 
-            // Strictly below a release's, so a pre-release never ties with the
-            // release it precedes. Equality would be two artefacts wearing one
-            // version.
+            // Keep pre-releases below the release revision so they never tie.
             _ when commitsSinceRelease < ReleaseRevision => commitsSinceRelease,
             _ => -1,
         };
@@ -210,19 +196,11 @@ public static class Rendering
     /// <c>major.minor.0.0</c>: held stable within a minor.
     /// </summary>
     /// <remarks>
-    /// <para>
-    /// This is a binding identity, not a build stamp. Moving it on every build
-    /// would make every assembly reference a distinct one, which is the problem
-    /// strong-name binding policy exists to work around rather than a thing to
-    /// create.
-    /// </para>
-    /// <para>
-    /// <b>It also could not carry the counter even if it should</b>, because
-    /// <see cref="ReleaseRevision"/> is one past what assembly metadata accepts.
-    /// That is why the return type is not the four-field quad: the two fields
-    /// have different ceilings, and a shared constant that is right for one
-    /// caller and wrong for the other is the bug rather than the convenience.
-    /// </para>
+    /// This is a binding identity, not a build stamp: changing it on every
+    /// build gives each assembly reference a distinct referent. It cannot carry
+    /// the release counter because <see cref="ReleaseRevision"/> is one past
+    /// the assembly metadata ceiling. The two-field return type keeps the
+    /// assembly and file-version ceilings separate.
     /// </remarks>
     public static AssemblyIdentityVersion AssemblyVersion(Publish publish) =>
         AssemblyIdentityVersion.TryCreate(publish.Version.Major, publish.Version.Minor)
@@ -234,10 +212,8 @@ public static class Rendering
     /// The full SemVer, verbatim and without the <c>v</c>.
     /// </summary>
     /// <remarks>
-    /// A free-form string, and the only field that can carry a pre-release
-    /// identifier at all. It is what the about box shows and what a crash
-    /// report should quote, because it is the only rendering from which the
-    /// tag - and therefore the build - can be recovered exactly.
+    /// This free-form field alone carries a pre-release identifier. The about
+    /// box and crash reports use it because it preserves the tag exactly.
     /// </remarks>
     public static string InformationalVersion(Publish publish) => publish.Tag[1..];
 }

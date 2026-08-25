@@ -126,8 +126,7 @@ public sealed class RenderingLaws
         Assert.Equal(WindowsVersion.MaxField, File(release, 0).Revision);
         Assert.Equal("0.4.2.65535", File(release, 0).ToString());
 
-        // And it does not depend on the offset, which for a release is the
-        // distance to a tag that is about to be the newest one.
+        // A release ignores the offset, which is the distance to its tag.
         Assert.Equal(File(release, 0), File(release, 9_999));
     }
 
@@ -144,17 +143,15 @@ public sealed class RenderingLaws
         Assert.Equal(0, File(pre, 0).Revision);
         Assert.Equal(WindowsVersion.MaxField - 1, File(pre, WindowsVersion.MaxField - 1).Revision);
 
-        // The maximum belongs to releases alone, so a pre-release may not reach
-        // it: they would tie, and two artefacts would wear one version.
+        // The maximum belongs to releases alone, so a pre-release may not tie
+        // with one.
         Assert.Null(Rendering.TryFileVersion(pre, WindowsVersion.MaxField));
         Assert.Null(Rendering.TryFileVersion(pre, WindowsVersion.MaxField + 1));
     }
 
     /// <summary>
-    /// The assembly version is held stable within a minor. It is a binding
-    /// identity, not a build stamp: moving it on every build would give every
-    /// reference a distinct target, which is the problem binding policy exists
-    /// to work around rather than one to create.
+    /// The assembly version is a binding identity, not a build stamp, so it is
+    /// stable within a minor.
     /// </summary>
     [Fact]
     public void An_assembly_version_moves_only_with_the_minor()
