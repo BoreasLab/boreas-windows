@@ -127,7 +127,6 @@ public sealed class NativeChannelLaws
         Assert.Equal(1, host.Starts);
     }
 
-    /// <summary>Stopping something that is not running is not an error.</summary>
     [Fact]
     public async Task A_stop_with_nothing_running_changes_nothing()
     {
@@ -364,7 +363,6 @@ public sealed class NativeChannelLaws
             await channel.ApplyConfigurationAsync(Configuration(), TestContext.Current.CancellationToken));
     }
 
-    /// <summary>What was stored is what is read back.</summary>
     [Fact]
     public async Task A_stored_configuration_is_what_the_form_reads_back()
     {

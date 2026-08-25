@@ -71,9 +71,6 @@ public sealed class PresentationLaws
                 Counters: default,
                 Bypass: bypass));
 
-    /// <summary>
-    /// Every state pair produces readable text.
-    /// </summary>
     [Theory]
     [MemberData(nameof(Domain))]
     public void Every_state_pair_produces_readable_text(int channel, int service)
@@ -86,9 +83,6 @@ public sealed class PresentationLaws
         Assert.False(string.IsNullOrWhiteSpace(presentation.GlyphLabel));
     }
 
-    /// <summary>
-    /// The screen-reader announcement carries headline and detail, not tone alone.
-    /// </summary>
     [Theory]
     [MemberData(nameof(Domain))]
     public void The_announcement_carries_everything_the_tone_does(int channel, int service)
@@ -99,9 +93,6 @@ public sealed class PresentationLaws
         Assert.Contains(presentation.Detail, presentation.Announcement, StringComparison.Ordinal);
     }
 
-    /// <summary>
-    /// A disconnected channel makes no tunnel claim or start/stop offer.
-    /// </summary>
     [Theory]
     [MemberData(nameof(Domain))]
     public void A_disconnected_channel_makes_no_claim_about_the_tunnel(int channel, int service)
@@ -120,9 +111,6 @@ public sealed class PresentationLaws
 
     private static readonly string[] TunnelClaims = ["Protected", "Off", "Running", "Starting", "Stopping"];
 
-    /// <summary>
-    /// "Protected" requires a connected, running session with bound bypass.
-    /// </summary>
     [Theory]
     [MemberData(nameof(Domain))]
     public void Protected_means_connected_running_and_bound(int channel, int service)
@@ -136,9 +124,6 @@ public sealed class PresentationLaws
         Assert.Equal(isProtected, presentation.Tone == StatusTone.Active);
     }
 
-    /// <summary>
-    /// Offered actions are legal in their service state.
-    /// </summary>
     [Theory]
     [MemberData(nameof(Domain))]
     public void Every_offered_action_is_legal_in_its_state(int channel, int service)
@@ -165,9 +150,6 @@ public sealed class PresentationLaws
         }
     }
 
-    /// <summary>
-    /// Transitional states show progress and offer no action.
-    /// </summary>
     [Theory]
     [MemberData(nameof(Domain))]
     public void Transitional_states_show_progress_and_offer_nothing(int channel, int service)
@@ -188,9 +170,6 @@ public sealed class PresentationLaws
         Assert.Equal(PrimaryAction.None, presentation.Action);
     }
 
-    /// <summary>
-    /// Unrecoverable failures offer no retry.
-    /// </summary>
     [Fact]
     public void An_unrecoverable_failure_offers_nothing_to_press()
     {
@@ -201,7 +180,6 @@ public sealed class PresentationLaws
         Assert.Equal(PrimaryAction.None, presentation.Action);
     }
 
-    /// <summary>A label exists exactly when an action exists.</summary>
     [Theory]
     [MemberData(nameof(Domain))]
     public void A_label_exists_exactly_when_an_action_does(int channel, int service)
@@ -212,9 +190,6 @@ public sealed class PresentationLaws
         Assert.Equal(model.HasPrimaryAction, model.Primary.CanExecute(null));
     }
 
-    /// <summary>
-    /// Session facts appear only for a running session on a connected channel.
-    /// </summary>
     [Theory]
     [MemberData(nameof(Domain))]
     public void Session_facts_appear_only_for_a_running_session(int channel, int service)
@@ -228,9 +203,6 @@ public sealed class PresentationLaws
         Assert.Equal(expected, model.Facts.Identity.Count > 0);
     }
 
-    /// <summary>
-    /// Bypass warning tracks degradation, not channel loss.
-    /// </summary>
     [Theory]
     [MemberData(nameof(Domain))]
     public void The_bypass_warning_tracks_the_bypass(int channel, int service)
@@ -242,9 +214,6 @@ public sealed class PresentationLaws
         Assert.Equal(degraded, model.BypassDegradation is not null);
     }
 
-    /// <summary>
-    /// The chip is always readable; banners appear only for actionable channel states.
-    /// </summary>
     [Theory]
     [MemberData(nameof(Domain))]
     public void The_channel_chip_is_always_readable(int channel, int service)
@@ -260,9 +229,6 @@ public sealed class PresentationLaws
         Assert.Equal(expectsBanner, presentation.Banner is not null);
     }
 
-    /// <summary>
-    /// Only retryable channel failure offers an action.
-    /// </summary>
     [Fact]
     public void Only_a_retryable_channel_failure_offers_an_action()
     {
@@ -271,9 +237,6 @@ public sealed class PresentationLaws
         Assert.Null(ChannelPresentation.For(new ControlChannelState.VersionMismatch(ControlProtocol.Version + 1)).Banner!.ActionLabel);
     }
 
-    /// <summary>
-    /// Every selector array covers its enum.
-    /// </summary>
     /// <remarks>
     /// C# cannot require enum coverage in arrays; this catches omissions and
     /// protects direct index assumptions.
@@ -300,9 +263,6 @@ public sealed class PresentationLaws
         Assert.Null(DiagnosticsViewModel.FilterOrder[0]);
     }
 
-    /// <summary>
-    /// Every configuration field has a distinct round-tripping wire name.
-    /// </summary>
     /// <remarks>
     /// Separate switches must remain inverse; this fails before a pipe response
     /// can become an unpinned field error.
@@ -322,9 +282,6 @@ public sealed class PresentationLaws
             Enum.GetValues<ConfigField>().Select(f => f.WireName).Distinct().Count());
     }
 
-    /// <summary>
-    /// Unknown service names are version skew and map to no field.
-    /// </summary>
     [Theory]
     [InlineData("")]
     [InlineData("adapterName")]
@@ -336,9 +293,6 @@ public sealed class PresentationLaws
     public void An_unknown_wire_name_is_not_invented_from_null() =>
         Assert.Null(ConfigField.FromWireName(null));
 
-    /// <summary>
-    /// Version mismatch reports this client's actual protocol version.
-    /// </summary>
     [Fact]
     public void A_version_mismatch_reports_the_version_this_client_speaks()
     {

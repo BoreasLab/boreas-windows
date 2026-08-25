@@ -6,11 +6,10 @@ namespace Boreas.Build;
 /// What triggered a publish.
 /// </summary>
 /// <remarks>
-/// A sum rather than a boolean beside an optional string. <see cref="Release"/>
-/// carries its tag and <see cref="Push"/> has none, so "a release event with no
-/// tag" is not a state anything can be asked about - which is what removes the
-/// <c>if [ "$IS_TAG" = true ]</c> from the workflow, along with the branch that
-/// read it.
+/// A sum rather than a boolean and optional string: <see cref="Release"/>
+/// carries its tag while <see cref="Push"/> does not, so a release without a
+/// tag is unwritable. The workflow needs no <c>if [ "$IS_TAG" = true ]</c>
+/// branch.
 /// </remarks>
 public abstract record TriggerEvent
 {
@@ -153,37 +152,20 @@ public abstract record Publish : IComparable<Publish>
     public static bool operator >=(Publish left, Publish right) => left.CompareTo(right) >= 0;
 }
 
-/// <summary>The whole algebra.</summary>
 public static class Release
 {
     /// <summary>
     /// Names what is being published, for every event.
     /// </summary>
     /// <remarks>
-    /// <para>
-    /// <b>Total: there is no gate here and no refusal.</b> The tag is the
-    /// version. An earlier design read a version out of the build files as well
-    /// and refused a tag that differed from it, which made cutting a release two
-    /// acts and made the one you forget the one that fails the build. That check
-    /// existed only because there were two sources; one source makes the
-    /// invariant hold by construction rather than by inspection.
-    /// </para>
-    /// <para>
-    /// The refusal that remains lives at the parse boundary, where a ref that is
-    /// not a release tag never becomes a <see cref="TriggerEvent.Release"/> in
-    /// the first place. A malformed tag is therefore not a state this function
-    /// can be asked about.
-    /// </para>
-    /// <para>
-    /// MSBuild demands a <c>Version</c> property of its own, and this never
-    /// consults it. It is the fallback a build with no tag carries, and nothing
-    /// more; see Directory.Build.props for why it reads 0.0.0.
-    /// </para>
-    /// <para>
-    /// O(n) in the tag count and O(1) in space. n is the number of releases a
-    /// repository has ever cut, so the fold is over tens of values and the cost
-    /// that matters is the <c>git tag</c> that produced them.
-    /// </para>
+    /// The tag is the version, and malformed tags are rejected before they can
+    /// become <see cref="TriggerEvent.Release"/>. MSBuild's own
+    /// <c>Version</c> property is not consulted; an untagged build uses the
+    /// <c>0.0.0</c> fallback described in Directory.Build.props.
+    ///
+    /// The fold is O(n) in the tag count and O(1) in space. A repository usually
+    /// has tens of release tags, while the dominant cost is the <c>git tag</c>
+    /// command that supplies them.
     /// </remarks>
     public static Publish Resolve(
         TriggerEvent trigger,
@@ -198,9 +180,9 @@ public static class Release
     /// ever shipped.
     /// </summary>
     /// <remarks>
-    /// One operand, folded from <see cref="ReleaseVersion.Origin"/>. A
-    /// repository that has never shipped heads for 0.0.1, and if the next
-    /// release should be a minor, the way to say so is to tag a minor.
+    /// Fold valid release tags with <see cref="ReleaseVersion.Origin"/>. An
+    /// empty set yields the first patch; a minor release is requested by its
+    /// tag.
     /// </remarks>
     public static ReleaseVersion BaseVersion(IEnumerable<string> tags) =>
         tags.Select(ReleaseVersion.TryParseTag)

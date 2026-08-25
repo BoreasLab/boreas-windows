@@ -67,10 +67,8 @@ public abstract record TunnelEvent
     /// </param>
     public sealed record Resolved(string Name, string? Rule, bool Blocked, bool Truncated) : TunnelEvent;
 
-    /// <summary>The rules in force were replaced.</summary>
     public sealed record Reloaded(ulong Allowed, ulong BlockedRules, ulong Inspected) : TunnelEvent;
 
-    /// <summary>A counting interval ended with something non-zero in it.</summary>
     public sealed record Counted(TunnelCounters Counters) : TunnelEvent;
 
     public TResult Match<TResult>(

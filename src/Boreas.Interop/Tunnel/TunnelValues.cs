@@ -63,9 +63,6 @@ public sealed record HostPort
     public override string ToString() => Value.ToString();
 }
 
-/// <summary>
-/// A host to intercept.
-/// </summary>
 /// <remarks>
 /// <b>An allowlist entry, never a pattern.</b> Interception forges a
 /// certificate, and the set of hosts that happens to should be one a person can
@@ -100,9 +97,8 @@ public sealed record Hostname
             return null;
         }
 
-        // A single pass over the text: labels are delimited, never nested, so
-        // there is nothing here a split would find that a scan does not, and
-        // the scan does not allocate.
+        // Validate each label after splitting once. The checks are linear in
+        // the input length; Split allocates the label substrings.
         foreach (var label in text.Split('.'))
         {
             if (label.Length is 0 or > MaximumLabelLength
