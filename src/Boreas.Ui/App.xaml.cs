@@ -22,7 +22,6 @@ public partial class App : Application
     /// </remarks>
     public static bool MotionEnabled => SystemUiSettings.AnimationsEnabled;
 
-    /// <summary>The shared channel instance.</summary>
     public static IControlChannel Channel { get; private set; } = null!;
 
     public static bool UsingSampleData { get; private set; }

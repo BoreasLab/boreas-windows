@@ -94,9 +94,6 @@ public sealed class SampleControlChannel : IControlChannel
         Counters: counters,
         Bypass: Bypass);
 
-    /// <summary>
-    /// Advances invented traffic for the running session.
-    /// </summary>
     private void Advance()
     {
         if (State is not ServiceState.Running running)

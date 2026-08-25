@@ -21,7 +21,6 @@ public sealed class StubChannel(ControlChannelState channel, ServiceState state)
         remove { }
     }
 
-    /// <summary>No resources are opened.</summary>
     public void Dispose()
     {
     }
@@ -67,7 +66,6 @@ public sealed class RecordingChannel(ConfigurationOutcome outcome, Configuration
         remove { }
     }
 
-    /// <summary>No resources are opened.</summary>
     public void Dispose()
     {
     }

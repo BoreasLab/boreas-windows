@@ -15,9 +15,6 @@ public sealed class ConfigurationLaws
         return model;
     }
 
-    /// <summary>
-    /// MTU accepts digits and surrounding whitespace, but no grouping.
-    /// </summary>
     [Theory]
     [InlineData("1420")]
     [InlineData(" 1420 ")]
@@ -36,9 +33,6 @@ public sealed class ConfigurationLaws
         Assert.Equal(1420, channel.LastApplied!.PacketSize.Value);
     }
 
-    /// <summary>
-    /// DNS accepts common separators because no canonical list spelling exists.
-    /// </summary>
     [Theory]
     [InlineData("10.7.0.1, 10.7.0.2")]
     [InlineData("10.7.0.1;10.7.0.2")]
@@ -59,9 +53,6 @@ public sealed class ConfigurationLaws
         Assert.Equal(DnsServers.TryParse("10.7.0.1 10.7.0.2"), channel.LastApplied!.Dns);
     }
 
-    /// <summary>
-    /// Parsing and canonical rendering are idempotent.
-    /// </summary>
     [Theory]
     [InlineData("Boreas", "10.7.0.2/24", "1420", "10.7.0.1, 10.7.0.2")]
     [InlineData("  Boreas  ", "  fd00::2/64  ", " 9000 ", "")]
@@ -78,9 +69,6 @@ public sealed class ConfigurationLaws
         Assert.Equal(once, twice);
     }
 
-    /// <summary>
-    /// Refined values exist only after their rule passes.
-    /// </summary>
     [Fact]
     public void A_refined_value_rejects_text_that_fails_its_rule()
     {
@@ -96,9 +84,6 @@ public sealed class ConfigurationLaws
         Assert.Equal(DnsServers.Empty, DnsServers.TryParse("   "));
     }
 
-    /// <summary>
-    /// Untouched fields stay silent until blur.
-    /// </summary>
     [Fact]
     public async Task An_untouched_field_stays_silent_while_it_is_being_typed()
     {
@@ -111,9 +96,6 @@ public sealed class ConfigurationLaws
         Assert.Null(model.AddressError);
     }
 
-    /// <summary>
-    /// An errored field clears as soon as its value becomes valid.
-    /// </summary>
     [Fact]
     public async Task An_errored_field_clears_as_soon_as_it_becomes_valid()
     {
@@ -157,9 +139,6 @@ public sealed class ConfigurationLaws
         Assert.False(string.IsNullOrWhiteSpace(model.AddressError));
     }
 
-    /// <summary>
-    /// Invalid forms never reach the service.
-    /// </summary>
     [Fact]
     public async Task An_invalid_form_is_not_sent()
     {
@@ -174,9 +153,6 @@ public sealed class ConfigurationLaws
         Assert.NotNull(model.FirstErrorField);
     }
 
-    /// <summary>
-    /// Service rejection preserves typed values and maps messages to fields.
-    /// </summary>
     [Fact]
     public async Task A_rejection_preserves_entry_and_places_each_message_at_its_field()
     {
@@ -199,9 +175,6 @@ public sealed class ConfigurationLaws
         Assert.Equal(ConfigField.Adapter, model.FirstErrorField);
     }
 
-    /// <summary>
-    /// Field-less rejection leaves field messages clear and uses the banner.
-    /// </summary>
     [Fact]
     public async Task A_rejection_naming_no_field_leaves_the_fields_alone()
     {
@@ -220,9 +193,6 @@ public sealed class ConfigurationLaws
         Assert.NotNull(model.OutcomeMessage);
     }
 
-    /// <summary>
-    /// Applied, restart-required, and rejected outcomes differ in message and tone.
-    /// </summary>
     [Fact]
     public async Task Each_outcome_produces_its_own_message_and_tone()
     {
@@ -240,7 +210,6 @@ public sealed class ConfigurationLaws
             message => Assert.False(string.IsNullOrWhiteSpace(message)));
     }
 
-    /// <summary>Discarding restores the service values and clears messages.</summary>
     [Fact]
     public async Task Discarding_restores_the_service_values_and_clears_every_message()
     {
@@ -257,7 +226,6 @@ public sealed class ConfigurationLaws
         Assert.Null(model.OutcomeMessage);
     }
 
-    /// <summary>The route index round-trips over the closed enum.</summary>
     [Theory]
     [InlineData(RouteMode.Default, 0)]
     [InlineData(RouteMode.Selected, 1)]
@@ -272,7 +240,6 @@ public sealed class ConfigurationLaws
         Assert.Equal(mode, model.Routes);
     }
 
-    /// <summary>Empty DNS keeps Windows' existing servers.</summary>
     [Fact]
     public async Task Leaving_dns_empty_is_valid()
     {
@@ -289,7 +256,6 @@ public sealed class ConfigurationLaws
     [InlineData("9001")]
     [InlineData("")]
     [InlineData("abc")]
-    // Previously parsed as 1420 when non-digits were discarded.
     [InlineData("abc1420")]
     [InlineData("1.4.2.0")]
     [InlineData("1,420")]

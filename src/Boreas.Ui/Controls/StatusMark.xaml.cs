@@ -36,7 +36,6 @@ public sealed partial class StatusMark : UserControl
         nameof(Surface), typeof(MarkSurface), typeof(StatusMark),
         new PropertyMetadata(MarkSurface.Canvas, OnVisualPropertyChanged));
 
-    /// <summary>The mark's status tone.</summary>
     public StatusTone Tone
     {
         get => (StatusTone)GetValue(ToneProperty);

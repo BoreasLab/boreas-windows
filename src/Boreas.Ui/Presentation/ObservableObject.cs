@@ -16,7 +16,6 @@ public abstract class ObservableObject : INotifyPropertyChanged
     protected void Raise([CallerMemberName] string? propertyName = null) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-    /// <summary>Assigns and notifies only when the value actually changed.</summary>
     /// <remarks>
     /// <paramref name="storage"/> avoids <c>field</c>, a C# 14 contextual
     /// keyword in property accessors.

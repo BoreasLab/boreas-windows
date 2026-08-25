@@ -6,22 +6,11 @@ namespace Boreas.Ui.Contracts;
 /// Which application, built against which core.
 /// </summary>
 /// <remarks>
-/// <para>
-/// <b>A bug report has to map to one of these pairs or it maps to nothing.</b>
-/// This artefact embeds a pinned boreas-core release, so neither version alone
-/// identifies what ran: the app version names a range of cores, and the core
-/// version names a range of apps.
-/// </para>
-/// <para>
-/// All three are strings, deliberately. The four-part file version cannot say
-/// "seven commits after v0.1.0, built against a core cut at 09:14", and that
-/// sentence is the whole content of a version that is not a release.
-/// </para>
-/// <para>
-/// The same two lines appear in the release notes, produced from the same
-/// values by the same tool. They are stamped in at build time and read back
-/// here, so there is nothing to keep in step by hand.
-/// </para>
+/// A pinned core release means neither the app version nor the core version
+/// alone identifies what ran. These strings preserve the full build context,
+/// including commit and core-release details that a four-part file version
+/// cannot carry. The release notes use the same values produced by the build,
+/// so they stay aligned without manual duplication.
 /// </remarks>
 public sealed record BuildIdentity(string App, string Position, string Core)
 {
@@ -29,8 +18,8 @@ public sealed record BuildIdentity(string App, string Position, string Core)
     /// What a build the release pipeline did not name says about itself.
     /// </summary>
     /// <remarks>
-    /// Visibly not a version. A developer's build carrying 0.0.0 and "local
-    /// build" is one nobody will mistake for something that shipped.
+    /// A developer build carrying 0.0.0 and "local build" is visibly not a
+    /// shipped version.
     /// </remarks>
     public const string Unstamped = "local build";
 

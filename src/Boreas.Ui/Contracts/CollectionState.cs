@@ -15,13 +15,10 @@ public abstract record CollectionState<T>
 
     public sealed record Failed(TypedError Error, Action Retry) : CollectionState<T>;
 
-    /// <summary>Nothing has ever been recorded.</summary>
     public sealed record Empty : CollectionState<T>;
 
-    /// <summary>Records exist, but none match the active filter.</summary>
     public sealed record Filtered(Action ClearFilter) : CollectionState<T>;
 
-    /// <summary>A bounded window over a larger set.</summary>
     public sealed record Partial(IReadOnlyList<T> Items, Action LoadMore) : CollectionState<T>;
 
     public sealed record Ready(IReadOnlyList<T> Items) : CollectionState<T>;

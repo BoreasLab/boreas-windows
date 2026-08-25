@@ -58,6 +58,5 @@ public abstract record ControlChannelState
             _ => throw Unreachable.Value(this),
         };
 
-    /// <summary>True only when a control command may be sent.</summary>
     public bool CanSendCommands => this is Connected;
 }
