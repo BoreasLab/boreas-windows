@@ -18,8 +18,8 @@ public sealed unsafe class NativeConfigLaws
 {
     private static string? ReadString(nint pointer) => Marshal.PtrToStringUTF8(pointer);
 
-    private static string?[] ReadArray(nint items, nuint count) =>
-        [.. Enumerable.Range(0, (int)count).Select(index => ReadString(((nint*)items)[index]))];
+    private static string[] ReadArray(nint items, nuint count) =>
+        [.. Enumerable.Range(0, (int)count).Select(index => Present.Value(ReadString(((nint*)items)[index])))];
 
     private static byte[] ReadBytes(nint pointer, nuint length) =>
         pointer == nint.Zero ? [] : new ReadOnlySpan<byte>((void*)pointer, (int)length).ToArray();

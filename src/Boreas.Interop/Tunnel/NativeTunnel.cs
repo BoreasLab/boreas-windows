@@ -12,7 +12,32 @@ namespace Boreas.Interop.Tunnel;
 /// secret and go under DPAPI. They are opaque and self-describing, and nothing
 /// here looks inside either.
 /// </remarks>
-public sealed record AuthorityMaterial(ImmutableArray<byte> RootCertificate, ImmutableArray<byte> Keys);
+public sealed record AuthorityMaterial(ImmutableArray<byte> RootCertificate, ImmutableArray<byte> Keys)
+{
+    /// <summary>
+    /// Structural, written out rather than synthesized.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="ImmutableArray{T}"/> compares its backing array by reference,
+    /// so the synthesized equality would report the material just read from
+    /// storage and the identical material about to be written as different.
+    /// api/lifecycle.md's instruction to store unconditionally rests on
+    /// "storing what you just restored is a no-op write", and an equality that
+    /// cannot see the two are the same is how that stops being true.
+    /// </remarks>
+    public bool Equals(AuthorityMaterial? other) =>
+        other is not null
+        && RootCertificate.AsSpan().SequenceEqual(other.RootCertificate.AsSpan())
+        && Keys.AsSpan().SequenceEqual(other.Keys.AsSpan());
+
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        hash.AddBytes(RootCertificate.AsSpan());
+        hash.AddBytes(Keys.AsSpan());
+        return hash.ToHashCode();
+    }
+}
 
 /// <summary>
 /// A running tunnel: its handle, its reader, and the ordering its teardown owes.

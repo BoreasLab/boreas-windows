@@ -37,6 +37,20 @@
     (xunit.runner.visualstudio). Three packages became one, and `dotnet test`
     still drives it.
   -->
+  <!--
+    DPAPI. Microsoft's own, and not in the shared framework on a
+    platform-neutral target framework: System.Security.Cryptography.ProtectedData
+    is where ProtectedData.Protect lives for anything that is not
+    net10.0-windows. Boreas.Interop targets plain net10.0 deliberately, so that
+    its ABI layout laws run on whatever machine builds the repository, and this
+    package is what that choice costs. It throws PlatformNotSupportedException
+    off Windows rather than failing to resolve, which is why the choice is
+    affordable.
+  -->
+  <ItemGroup>
+    <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="10.0.0" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageVersion Include="xunit.v3" Version="3.2.2" />
   </ItemGroup>

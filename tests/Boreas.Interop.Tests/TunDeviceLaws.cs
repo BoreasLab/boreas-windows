@@ -155,7 +155,7 @@ public sealed unsafe class TunDeviceLaws
             });
 
             reader.Start();
-            Assert.True(entered.Wait(TimeSpan.FromSeconds(5)));
+            Assert.True(entered.Wait(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
 
             device.Close(device.Context);
 
