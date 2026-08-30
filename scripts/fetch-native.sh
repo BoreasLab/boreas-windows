@@ -72,6 +72,11 @@ BOREAS_TAG="$(sed -n 's|.*<BoreasCoreTag>\(.*\)</BoreasCoreTag>.*|\1|p' "$REPO/D
 readonly BOREAS_TAG
 [ -n "$BOREAS_TAG" ] || die "Directory.Build.props declares no <BoreasCoreTag>."
 
+# Parsed, not merely present: the tag names a URL and a cache directory below,
+# and the version stripped out of it just under here assumes this shape anyway.
+[[ "$BOREAS_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] \
+  || die "<BoreasCoreTag>$BOREAS_TAG</BoreasCoreTag> is not a boreas-core release tag."
+
 # The archive inside a release is named for the base version, not the tag: a
 # pre-release tag carries the build stamp and the archive does not. Derived
 # rather than pinned separately, so the two cannot come to name different
@@ -85,7 +90,11 @@ readonly DOWNLOADS="$NATIVE/downloads"
 readonly BOREAS_DIR="$NATIVE/boreas"
 readonly WINTUN_DIR="$NATIVE/wintun"
 
-readonly BOREAS_ARCHIVE="$DOWNLOADS/boreas-$BOREAS_VERSION-windows.zip"
+# Cached under the tag. The archive is named for the base version, so every
+# pre-release of one base shares a file name, and `fetch` keeps whatever is
+# already there -- moving the pin would otherwise check yesterday's download
+# against today's digest.
+readonly BOREAS_ARCHIVE="$DOWNLOADS/$BOREAS_TAG/boreas-$BOREAS_VERSION-windows.zip"
 readonly WINTUN_ARCHIVE="$DOWNLOADS/wintun-$WINTUN_VERSION.zip"
 
 # --- Shared effects ----------------------------------------------------------
