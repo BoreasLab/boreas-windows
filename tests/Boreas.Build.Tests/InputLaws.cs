@@ -98,10 +98,19 @@ public sealed class InputLaws
         // The fallback, which is a placeholder and visibly not a claim.
         Assert.Equal("0.0.0", Declared.Property(props, Declared.VersionProperty));
 
-        // The pin, which must be a tag boreas-core could have cut.
+        // The pin, which must be a tag boreas-core could have cut: a triple
+        // behind `v`, with or without the identifiers a pre-release carries.
+        // Not "contains -dev." -- that reads as the shape law and is not one,
+        // since it would refuse the day the core cuts an actual release.
         var core = Present.Value(Declared.CoreTag(props));
-        Assert.StartsWith("v", core, StringComparison.Ordinal);
-        Assert.Contains("-dev.", core, StringComparison.Ordinal);
+        var identifiers = core.IndexOf('-', StringComparison.Ordinal);
+        var triple = identifiers < 0 ? core : core[..identifiers];
+
+        Assert.NotNull(ReleaseVersion.TryParseTag(triple));
+        if (identifiers >= 0)
+        {
+            Assert.NotEmpty(core[(identifiers + 1)..]);
+        }
     }
 
     private static string RepositoryRoot()
