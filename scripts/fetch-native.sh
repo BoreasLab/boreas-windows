@@ -32,7 +32,7 @@ set -euo pipefail
 # The digests do live here. They are properties of an archive rather than of the
 # product, and the file that declares what the product is has no business
 # carrying them.
-readonly BOREAS_SHA256="885cd92deeae4b8cd43f9d2fc5d4d607b74b296a2260be5718eb86701ad8dbd7"
+readonly BOREAS_SHA256="5633cfe69c7d8757f8ae93fa608b67a654c98f7e9d84bda77506dfede8bcf2d2"
 readonly BOREAS_REPO="BoreasLab/boreas-core"
 
 readonly WINTUN_VERSION="0.14.1"
