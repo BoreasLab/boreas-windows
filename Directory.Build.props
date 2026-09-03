@@ -44,7 +44,7 @@
   -->
   <PropertyGroup>
     <Version>0.0.0</Version>
-    <BoreasCoreTag>v0.0.1-dev.2026-09-03.06-53-44.geb3cc06</BoreasCoreTag>
+    <BoreasCoreTag>v0.0.1-dev.2026-09-03.18-59-25.g42aa394</BoreasCoreTag>
 
     <!-- Where HEAD sat relative to the last release, passed by the pipeline.
          A build that did not come from it says so rather than guessing. -->
